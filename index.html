@@ -14,7 +14,7 @@
   --bg:#0F1412; --card:#1A211D; --panel:#151B18; --chip:#222B26; --field:#141A17;
   --text:#E9EFEB; --sub:#8FA096; --line:#26302A;
   --accent:#8FBCA5; --accent-soft:#233029; --ondark:#0F1512;
-  --sched:#8FBCA5; --routine:#8FBCA5; --review:#D4B483; --review-soft:#2C2620;
+  --sched:#8FBCA5; --routine:#8FB0D2; --routine-soft:#232B33; --review:#D4B483; --review-soft:#2C2620;
   --danger:#E08A8A;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -43,7 +43,8 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
 .filterbar{display:flex;gap:8px;padding:12px 20px 6px;align-items:center;overflow-x:auto}
 .fchip{display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;padding:8px 14px;border-radius:20px;background:var(--card);border:1.5px solid var(--line);color:var(--sub);white-space:nowrap}
 .fchip.on{color:var(--ondark);border-color:transparent}
-.fchip.on.c-sched,.fchip.on.c-routine{background:var(--accent)}
+.fchip.on.c-sched{background:var(--sched)}
+.fchip.on.c-routine{background:var(--routine)}
 .fchip.on.c-review{background:var(--review)}
 .fchip.gear{margin-left:auto;background:var(--card);color:var(--sub)}
 
@@ -60,7 +61,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
 .cal-cell.today.hol-kr .dnum{color:var(--ondark)}
 .hol{font-size:8.5px;text-align:center;line-height:1.2;color:#C98A8A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hol.jp{color:#7FA3C9}
-.evt{font-size:10.5px;line-height:1.3;padding:2px 4px;border-radius:5px;color:var(--ondark);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.evt{font-size:8.5px;line-height:1.35;padding:1.5px 2.5px;border-radius:4px;color:var(--ondark);font-weight:600;letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .evt.sched{background:var(--sched)}.evt.review{background:var(--review)}
 .evt.novel{background:transparent;color:var(--accent);border:1px solid var(--accent);font-weight:600}
 .evt.gcal{background:#2E3A34;color:#BFD9CB}
@@ -96,14 +97,16 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
 .rt-pct{font-size:14px;font-weight:700;color:var(--routine)}
 .bar{height:5px;background:var(--chip);border-radius:3px;margin-top:5px;overflow:hidden}
 .bar>i{display:block;height:100%;background:var(--accent);border-radius:3px}
+.rt-rate .bar>i{background:var(--routine)}
+#routine-detail-body .stat-big b{color:var(--routine)}
 .chk-today{width:32px;height:32px;border-radius:50%;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:15px;color:transparent;flex-shrink:0}
-.chk-today.done{background:var(--accent);border-color:var(--accent);color:var(--ondark)}
+.chk-today.done{background:var(--routine);border-color:var(--routine);color:var(--ondark)}
 
 /* routine detail mini calendar */
 .mini-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:8px}
 .mini-cell{aspect-ratio:1;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:12px;background:var(--chip);color:var(--sub);cursor:pointer;position:relative}
-.mini-cell.goalday{outline:1.5px dashed #3E5A4C}
-.mini-cell.checked{background:var(--accent);color:var(--ondark);font-weight:700;outline:none}
+.mini-cell.goalday{outline:1.5px dashed #3E4E5E}
+.mini-cell.checked{background:var(--routine);color:var(--ondark);font-weight:700;outline:none}
 .mini-cell.future{opacity:.35;cursor:default}
 .mini-cell.blank{background:transparent;cursor:default}
 
@@ -112,6 +115,28 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
 .rv-thumb{width:66px;height:90px;object-fit:cover;border-radius:10px;flex-shrink:0;background:var(--chip)}
 .poster{width:88px;height:118px;border-radius:11px;background:var(--chip);display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--sub);overflow:hidden;flex-shrink:0}
 .poster img{width:100%;height:100%;object-fit:cover}
+/* 후기 캘린더뷰 */
+.rvc-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.rvc-cell{aspect-ratio:2/3;border-radius:8px;background:var(--card);position:relative;overflow:hidden;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--sub);font-size:16px}
+.rvc-cell.other{opacity:.3}
+.rvc-cell img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.rvc-day{position:absolute;top:3px;left:4px;font-size:9.5px;font-weight:700;color:#DFE8E2;background:rgba(10,14,12,.55);border-radius:5px;padding:1px 4px;z-index:2}
+.rvc-more{position:absolute;bottom:3px;right:4px;font-size:9px;font-weight:700;color:var(--ondark);background:var(--review);border-radius:5px;padding:1px 4px;z-index:2}
+/* 웹소설 작업 캘린더 */
+.nlc-cell{aspect-ratio:1;border-radius:9px;background:var(--chip);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;color:var(--sub);cursor:pointer;gap:1px}
+.nlc-cell.logged{background:var(--accent);color:var(--ondark);font-weight:700}
+.nlc-cell.future{opacity:.35;cursor:default}
+.nlc-cell.blank{background:transparent;cursor:default}
+.nlc-cell .k{font-size:9.5px;line-height:1.1;font-weight:700;letter-spacing:-.3px}
+.nlc-tag{font-size:8px;line-height:1.3;font-weight:700;background:rgba(12,17,14,.28);border-radius:4px;padding:0 3px}
+/* 할일 */
+.evt.todo{background:var(--chip);color:var(--text);border:1px solid var(--line)}
+.evt.todo.done{opacity:.45;text-decoration:line-through}
+.rv-album{display:grid;grid-template-columns:repeat(3,1fr);gap:12px 10px}
+.alb{cursor:pointer;min-width:0}
+.alb .ath{width:100%;aspect-ratio:2/3;object-fit:cover;border-radius:10px;background:var(--chip);display:flex;align-items:center;justify-content:center;color:var(--sub);font-size:24px}
+.alb .at{font-size:11.5px;font-weight:600;margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.alb .as{font-size:10.5px;color:var(--review);margin-top:2px}
 .rv-cat{font-size:10.5px;font-weight:700;color:var(--review);background:var(--review-soft);border-radius:6px;padding:3px 8px;height:fit-content;white-space:nowrap}
 .rv-body{flex:1;min-width:0}
 .rv-title{font-size:15px;font-weight:600}
@@ -172,7 +197,8 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
 .ds-sub{font-size:11.5px;color:var(--sub)}
 .mini-act{font-size:12px;font-weight:600;color:var(--accent);background:var(--accent-soft);padding:6px 10px;border-radius:8px;white-space:nowrap}
 .rt-check{width:28px;height:28px;border-radius:50%;border:2px solid var(--line);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:transparent}
-.rt-check.done{background:var(--accent);border-color:var(--accent);color:var(--ondark)}
+.rt-check.done{background:var(--routine);border-color:var(--routine);color:var(--ondark)}
+.rt-check.todo-chk.done{background:var(--sched);border-color:var(--sched)}
 
 .stat-big{display:flex;align-items:baseline;gap:6px}
 .stat-big b{font-size:34px;color:var(--accent)}
@@ -188,7 +214,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
 <!-- ===== 캘린더 탭 ===== -->
 <div id="page-cal">
   <div class="hdr">
-    <div class="hdr-row"><h1>마이 스케줄</h1></div>
+    <div class="hdr-row"><h1>Calendar</h1></div>
   </div>
   <div class="hdr2">
     <div class="month-nav">
@@ -208,7 +234,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
 <!-- ===== 루틴 탭 ===== -->
 <div id="page-routine" class="hidden">
   <div class="hdr">
-    <div class="hdr-row"><h1>루틴</h1></div>
+    <div class="hdr-row"><h1>Routine</h1></div>
   </div>
   <div class="hdr2">
     <div class="month-nav">
@@ -232,7 +258,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
 <!-- ===== 웹소설 탭 ===== -->
 <div id="page-novel" class="hidden">
   <div class="hdr">
-    <div class="hdr-row"><h1>웹소설</h1></div>
+    <div class="hdr-row"><h1>Novel</h1></div>
   </div>
   <div class="hdr2">
     <div class="month-nav">
@@ -244,26 +270,28 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
   </div>
   <div class="page">
     <div id="novel-summary"></div>
+    <div class="sec-title" style="display:flex;justify-content:space-between;align-items:center">작업 기록
+      <span id="nv-log-toggle"></span></div>
+    <div id="novel-worklog"></div>
     <div class="sec-title" style="display:flex;justify-content:space-between;align-items:center">작품
       <button style="color:var(--accent);font-size:13px;font-weight:600" onclick="openWorkModal()">＋ 새 작품</button></div>
     <div id="work-list"></div>
-    <div class="sec-title">이번달 작업 기록</div>
-    <div class="card" id="novel-logs"></div>
   </div>
 </div>
 
 <!-- ===== 후기 탭 ===== -->
 <div id="page-review" class="hidden">
-  <div class="hdr"><div class="hdr-row"><h1>후기</h1></div></div>
+  <div class="hdr"><div class="hdr-row"><h1>Review</h1></div></div>
   <div class="page">
     <div class="cat-chips" id="rv-cat-chips"></div>
+    <div id="rv-controls"></div>
     <div id="review-list"></div>
   </div>
 </div>
 
 <!-- ===== 설정 탭 ===== -->
 <div id="page-settings" class="hidden">
-  <div class="hdr"><div class="hdr-row"><h1>설정</h1></div></div>
+  <div class="hdr"><div class="hdr-row"><h1>Settings</h1></div></div>
   <div class="page">
     <div class="sec-title" style="margin-top:16px">구글 드라이브 동기화</div>
     <div class="card" id="sync-card"></div>
@@ -281,10 +309,12 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
       </div>
       <input type="file" id="json-file" accept=".json" class="hidden" onchange="importData(this)">
     </div>
-    <div class="sec-title">스케줄 태그 관리</div>
-    <div class="card" id="tag-manage"></div>
-    <div class="sec-title">후기 카테고리 관리</div>
-    <div class="card" id="cat-manage"></div>
+    <div class="sec-title">데이터 리스트</div>
+    <div class="card">
+      <div class="settings-row" onclick="openDataListSheet()">
+        <div>데이터 리스트 관리<div class="desc">후기 카테고리 · 스케줄 태그 · 본 곳/OTT · 루틴 그룹 선택지를 관리해요</div></div><span>›</span>
+      </div>
+    </div>
     <div class="sec-title">안내</div>
     <div class="card" style="font-size:12.5px;color:var(--sub);line-height:1.6">
       드라이브 동기화를 연결하면 데이터가 내 구글 드라이브(my-schedule-data.json)에 자동 저장되고, 다른 기기에서도 이어서 쓸 수 있어요. 연결하지 않으면 이 브라우저에만 저장되니 데이터 백업을 활용해주세요.
@@ -295,11 +325,11 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
 <button class="fab" id="fab" onclick="openAddPicker()">＋</button>
 
 <div class="tabbar">
-  <button class="tab on" data-tab="cal" onclick="switchTab('cal')"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="3"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>캘린더</button>
-  <button class="tab" data-tab="routine" onclick="switchTab('routine')"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="8.5 12.5 11 15 15.5 9.5"/></svg>루틴</button>
-  <button class="tab" data-tab="novel" onclick="switchTab('novel')"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>웹소설</button>
-  <button class="tab" data-tab="review" onclick="switchTab('review')"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 3 14.9 9 21.5 9.8 16.7 14.3 17.9 20.9 12 17.7 6.1 20.9 7.3 14.3 2.5 9.8 9.1 9"/></svg>후기</button>
-  <button class="tab" data-tab="settings" onclick="switchTab('settings')"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7.5" x2="20" y2="7.5"/><circle cx="9.5" cy="7.5" r="2.6" fill="var(--bg)"/><line x1="4" y1="16.5" x2="20" y2="16.5"/><circle cx="14.5" cy="16.5" r="2.6" fill="var(--bg)"/></svg>설정</button>
+  <button class="tab on" data-tab="cal" onclick="switchTab('cal')"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="3"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendar</button>
+  <button class="tab" data-tab="routine" onclick="switchTab('routine')"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="8.5 12.5 11 15 15.5 9.5"/></svg>Routine</button>
+  <button class="tab" data-tab="novel" onclick="switchTab('novel')"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Novel</button>
+  <button class="tab" data-tab="review" onclick="switchTab('review')"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 3 14.9 9 21.5 9.8 16.7 14.3 17.9 20.9 12 17.7 6.1 20.9 7.3 14.3 2.5 9.8 9.1 9"/></svg>Review</button>
+  <button class="tab" data-tab="settings" onclick="switchTab('settings')"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7.5" x2="20" y2="7.5"/><circle cx="9.5" cy="7.5" r="2.6" fill="var(--bg)"/><line x1="4" y1="16.5" x2="20" y2="16.5"/><circle cx="14.5" cy="16.5" r="2.6" fill="var(--bg)"/></svg>Settings</button>
 </div>
 
 <div id="modal-root"></div>
@@ -307,7 +337,8 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
 <script>
 'use strict';
 /* ================= 상태 ================= */
-const DEFAULT_CATS = ['영화','연뮤','콘서트','책','전시','애니메이션'];
+const DEFAULT_CATS = ['영화','연뮤','콘서트','책','전시','애니메이션','게임','경기'];
+const DEF_CAT_ICONS = {'영화':'🎬','연뮤':'🎭','콘서트':'🎤','책':'📖','전시':'🖼️','애니메이션':'📺','게임':'🎮','경기':'⚽'};
 let state = load();
 function load(){
   try{
@@ -325,8 +356,8 @@ function load(){
       s.worklogs = s.worklogs||[];
       s.novelGoal = s.novelGoal||{perWeek:5, monthlyChars:0};
       s.filters.novel = s.filters.novel!==false;
-      s.filters.jpHol = !!s.filters.jpHol;
-      s.filters.gcal = !!s.filters.gcal;
+      if(!s.filters.holDefaultsV2){ s.filters.jpHol=true; s.filters.gcal=true; s.filters.holDefaultsV2=1; }
+      else { s.filters.jpHol=!!s.filters.jpHol; s.filters.gcal=!!s.filters.gcal; }
       (s.schedules||[]).forEach(x=>{
         if(x.type==='ticket') x.type='once'; // 티켓팅 유형 통합
         if(x.type==='recurring'&&!x.recur) x.recur={freq:'weekly',interval:1,days:x.days||[]};
@@ -339,12 +370,20 @@ function load(){
         }
       });
       s.catIcons = s.catIcons||{};
+      ['게임','경기'].forEach(c=>{ if(!s.categories.includes(c)) s.categories.push(c); });
+      Object.keys(DEF_CAT_ICONS).forEach(k=>{ if(s.categories.includes(k)&&!s.catIcons[k]) s.catIcons[k]=DEF_CAT_ICONS[k]; });
+      s.moviePlaces = s.moviePlaces||['CGV','롯데시네마','메가박스','OTT','기타'];
+      s.ottList = s.ottList||['넷플릭스','디즈니+','티빙','웨이브','쿠팡플레이','왓챠','라프텔','기타'];
+      s.ui = Object.assign({rvView:'list', rvSort:'dateDesc', rvStars:[], rvYear:'', nvLogView:'cal'}, s.ui||{});
       return s;
     }
   }catch(e){}
-  return { schedules:[], routines:[], groups:[], reviews:[], categories:[...DEFAULT_CATS], catIcons:{}, schedTags:['LOL'],
+  return { schedules:[], routines:[], groups:[], reviews:[], categories:[...DEFAULT_CATS], catIcons:{...DEF_CAT_ICONS}, schedTags:['LOL'],
+    moviePlaces:['CGV','롯데시네마','메가박스','OTT','기타'],
+    ottList:['넷플릭스','디즈니+','티빙','웨이브','쿠팡플레이','왓챠','라프텔','기타'],
+    ui:{rvView:'list', rvSort:'dateDesc', rvStars:[], rvYear:'', nvLogView:'cal'},
     works:[], worklogs:[], novelGoal:{perWeek:5, monthlyChars:0},
-    filters:{sched:true,routine:true,review:true, novel:true, exSchedTypes:[], exSchedTags:[], exRoutines:[], exCats:[]} };
+    filters:{sched:true,routine:true,review:true, novel:true, jpHol:true, gcal:true, holDefaultsV2:1, exSchedTypes:[], exSchedTags:[], exRoutines:[], exCats:[]} };
 }
 function save(){
   state.updatedAt=new Date().toISOString();
@@ -426,7 +465,13 @@ function schedOccursOn(s,ds){
     if(s.endDate && ds > s.endDate) return false;
     return recurOn(s.recur||{freq:'weekly',interval:1,days:s.days||[]}, s.date, ds);
   }
+  if(s.type==='todo') return s.date===ds;
   return s.date<=ds && ds<=(s.endDate||s.date);
+}
+function toggleTodo(id, ds){
+  const s=state.schedules.find(x=>x.id===id);
+  if(s){ s.done=!s.done; save(); }
+  if(ds) openDaySheet(ds); else render();
 }
 function routineGoalOn(r,ds){
   if(ds < r.startDate) return false;
@@ -442,7 +487,7 @@ function renderFilterbar(){
     chip('routine','루틴',f.routine,'c-routine') +
     (state.works.length?chip('novel','웹소설',f.novel,'c-sched'):'') +
     chip('review','후기',f.review,'c-review') +
-    '<button class="fchip gear" onclick="openFilterSheet()">상세필터</button>';
+    '<button class="fchip gear" onclick="openFilterSheet()" aria-label="상세필터"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 4 21 4 14 12.5 14 19 10 21 10 12.5"/></svg></button>';
   function chip(k,label,on,cls){
     return `<button class="fchip ${on?'on':''} ${cls}" onclick="toggleFilter('${k}')">${label}</button>`;
   }
@@ -450,7 +495,7 @@ function renderFilterbar(){
 function toggleFilter(k){ state.filters[k]=!state.filters[k]; save(); render(); }
 function openFilterSheet(){
   const f=state.filters;
-  const schedTypes=[['once','일회성'],['recurring','정기']];
+  const schedTypes=[['once','일회성'],['recurring','정기'],['todo','할일']];
   let html='<div class="sec-title" style="margin-top:0">공휴일</div><div class="check-list">';
   html+='<label><input type="checkbox" checked disabled>한국 공휴일 (항상 표시)</label>';
   html+=`<label><input type="checkbox" ${f.jpHol?'checked':''} onchange="state.filters.jpHol=this.checked;save();renderCalendar()">일본 공휴일</label>`;
@@ -480,10 +525,10 @@ function dayItems(ds){
   const f=state.filters, out={scheds:[],routines:[],reviews:[],novel:[]};
   if(f.sched) out.scheds = state.schedules.filter(s=>!f.exSchedTypes.includes(s.type)&&!(s.tag&&f.exSchedTags.includes(s.tag))&&schedOccursOn(s,ds));
   if(f.routine) out.routines = state.routines.filter(r=>!f.exRoutines.includes(r.id)&&(routineGoalOn(r,ds)||r.checks[ds]||(r.recur.freq==='flex'&&ds<=todayStr()&&ds>=r.startDate)));
-  if(f.review) out.reviews = state.reviews.filter(rv=>!f.exCats.includes(rv.category)&&reviewOn(rv,ds));
+  if(f.review) out.reviews = state.reviews.filter(rv=>!rv.fromScheduleId&&!f.exCats.includes(rv.category)&&reviewOn(rv,ds)); // 스케줄 연동 후기는 캘린더에서 숨김(스케줄이 대신 표시)
   if(f.novel) state.works.forEach(w=>{
     w.episodes.forEach(e=>{ if(e.date===ds) out.novel.push({wid:w.id, t:w.title+' '+e.ep+'화', sub:'회차 업로드'}); });
-    (w.pubs||[]).forEach(p=>{ if(p.date===ds) out.novel.push({wid:w.id, t:w.title+' '+(p.label||'출간'), sub:'출간'}); });
+    (w.pubs||[]).forEach(p=>{ if(p.date===ds) out.novel.push({wid:w.id, t:w.title+' 출간', sub:'출간'+(p.label?' · '+p.label:'')}); });
   });
   out.gcal = (f.gcal&&typeof gcalOn==='function') ? gcalOn(ds) : [];
   return out;
@@ -506,7 +551,7 @@ function renderCalendar(){
     if(hk) inner+=`<div class="hol">${hk}</div>`;
     if(hj) inner+=`<div class="hol jp">${hj}</div>`;
     const evts=[
-      ...it.scheds.map(s=>({t:s.title,cls:'sched'})),
+      ...it.scheds.map(s=>s.type==='todo'?{t:(s.done?'☑ ':'☐ ')+s.title,cls:'todo'+(s.done?' done':'')}:{t:s.title,cls:'sched'}),
       ...it.gcal.map(g=>({t:g.title,cls:'gcal'})),
       ...it.novel.map(n=>({t:n.t,cls:'novel'})),
       ...it.reviews.map(r=>({t:r.title,cls:'review'}))
@@ -546,15 +591,33 @@ function openDaySheet(ds){
       const isPast = ds<=tds;
       const linked = state.reviews.find(r=>r.fromScheduleId===s.id);
       const period = s.type==='once'&&s.endDate&&s.endDate!==s.date ? s.date+' ~ '+s.endDate : null;
+      const isTodo = s.type==='todo';
       html+=`<div class="ds-item">
-        <span class="ds-badge" style="background:var(--sched)"></span>
+        <span class="ds-badge" style="background:${isTodo?'transparent':'var(--sched)'};${isTodo?'border:2px solid var(--sub)':''}"></span>
         <div class="ds-main" onclick="openScheduleModal('${s.id}')">
-          <div class="ds-title">${esc(s.title)}${linked?' <span style="font-size:10px;color:var(--review);border:1px solid var(--review);border-radius:5px;padding:1px 5px;vertical-align:1px">후기</span>':''}</div>
-          <div class="ds-sub">${s.tag?'#'+esc(s.tag)+' · ':''}${s.time?s.time+' · ':''}${s.type==='once'?(period||'일회성'):'정기 · '+recurText(s.recur)}${s.memo?' · '+esc(s.memo):''}</div>
+          <div class="ds-title" style="${isTodo&&s.done?'text-decoration:line-through;opacity:.55':''}">${esc(s.title)}${linked?' <span style="font-size:10px;color:var(--review);border:1px solid var(--review);border-radius:5px;padding:1px 5px;vertical-align:1px">후기</span>':''}</div>
+          <div class="ds-sub">${s.tag?'#'+esc(s.tag)+' · ':''}${s.time?s.time+' · ':''}${isTodo?'할일':s.type==='once'?(period||'일회성'):'정기 · '+recurText(s.recur)}${s.memo?' · '+esc(s.memo):''}</div>
         </div>
-        ${isPast?`<button class="mini-act" onclick="event.stopPropagation();reviewFromSchedule('${s.id}','${ds}')">${linked?'후기 보기':'후기 쓰기'}</button>`:''}
+        ${isTodo?`<button class="rt-check todo-chk ${s.done?'done':''}" onclick="event.stopPropagation();toggleTodo('${s.id}','${ds}')">✓</button>`
+          :isPast?`<button class="mini-act" onclick="event.stopPropagation();reviewFromSchedule('${s.id}','${ds}')">${linked?'후기 보기':'후기 쓰기'}</button>`:''}
       </div>`;
     });
+    if(ds===tds&&state.filters.sched){
+      const overdue=state.schedules.filter(s=>s.type==='todo'&&!s.done&&s.date<tds&&!(s.tag&&state.filters.exSchedTags.includes(s.tag))&&!state.filters.exSchedTypes.includes('todo'));
+      if(overdue.length){
+        html+='<div class="sec-title" style="margin-top:14px">지난 할일</div>';
+        overdue.sort((a,b)=>a.date.localeCompare(b.date)).forEach(s=>{
+          html+=`<div class="ds-item">
+            <span class="ds-badge" style="background:transparent;border:2px solid var(--danger)"></span>
+            <div class="ds-main" onclick="openScheduleModal('${s.id}')">
+              <div class="ds-title">${esc(s.title)}</div>
+              <div class="ds-sub" style="color:var(--danger)">${s.date} 예정이었어요</div>
+            </div>
+            <button class="rt-check todo-chk" onclick="event.stopPropagation();toggleTodo('${s.id}','${ds}')">✓</button>
+          </div>`;
+        });
+      }
+    }
     it.routines.forEach(r=>{
       const done=!!r.checks[ds], future=ds>tds;
       html+=`<div class="ds-item">
@@ -615,7 +678,7 @@ function openScheduleModal(id, presetDate, unified){
   unifiedAdd=!!unified;
   const s = id ? state.schedules.find(x=>x.id===id) : null;
   schedDraft = s ? JSON.parse(JSON.stringify(s)) :
-    {id:null,title:'',type:'once',date:presetDate||todayStr(),endDate:'',time:'',days:[],memo:'',tag:'',recur:{freq:'weekly',interval:1,days:[]}};
+    {id:null,title:'',type:'once',date:presetDate||todayStr(),endDate:'',time:'',days:[],memo:'',tag:'',done:false,recur:{freq:'weekly',interval:1,days:[]}};
   if(!schedDraft.recur) schedDraft.recur={freq:'weekly',interval:1,days:schedDraft.days||[]};
   renderScheduleModal();
 }
@@ -652,6 +715,9 @@ function renderScheduleModal(){
       <div class="frow"><label>반복 시작일</label><input type="date" value="${d.date}" onchange="schedDraft.date=this.value"></div>
       <div class="frow"><label>반복 종료일 (선택)</label><input type="date" value="${d.endDate||''}" onchange="schedDraft.endDate=this.value"></div>
     </div>`;
+  } else if(d.type==='todo'){
+    extra=`<div class="frow"><label>날짜</label><input type="date" value="${d.date}" onchange="schedDraft.date=this.value"></div>
+    ${d.id?`<div class="frow"><label>완료 여부</label><div class="seg"><button class="${!d.done?'on':''}" onclick="schedDraft.done=false;renderScheduleModal()">미완료</button><button class="${d.done?'on':''}" onclick="schedDraft.done=true;renderScheduleModal()">완료</button></div></div>`:''}`;
   } else {
     extra=`<div class="frow-2">
       <div class="frow"><label>시작일</label><input type="date" value="${d.date}" onchange="schedDraft.date=this.value"></div>
@@ -661,7 +727,7 @@ function renderScheduleModal(){
   openSheet(d.id?'스케줄 수정':(unifiedAdd?'새로 만들기':'스케줄 추가'), `
     ${!d.id&&unifiedAdd?kindSeg('sched'):''}
     <div class="frow"><label>제목 *</label><input id="sc-title" placeholder="예: 네일아트 예약, 일본어 수업" value="${esc(d.title)}" oninput="schedDraft.title=this.value"></div>
-    <div class="frow"><label>유형</label><div class="seg">${seg('once','일회성')}${seg('recurring','정기')}</div></div>
+    <div class="frow"><label>유형</label><div class="seg">${seg('once','일회성')}${seg('recurring','정기')}${seg('todo','할일')}</div></div>
     ${extra}
     <div class="frow"><label>태그 (선택)</label>
       <select onchange="if(this.value==='__new'){addSchedTag()}else{schedDraft.tag=this.value}">
@@ -842,7 +908,7 @@ function renderRoutineModal(){
     <div class="frow"><label>이름 *</label><input placeholder="예: 몬스테라 물주기, 일본어 단어" value="${esc(d.name)}" oninput="rtDraft.name=this.value"></div>
     <div class="frow"><label>아이콘</label><div class="emoji-grid">${EMOJIS.map(e=>`<button class="${d.icon===e?'on':''}" onclick="rtDraft.icon='${e}';renderRoutineModal()">${e}</button>`).join('')}</div></div>
     <div class="frow"><label>그룹 (선택)</label>
-      <select onchange="if(this.value==='__new'){openGroupModal()}else{rtDraft.groupId=this.value}">
+      <select onchange="if(this.value==='__new'){openGroupModal('routine')}else{rtDraft.groupId=this.value}">
         <option value="">그룹 없음</option>
         ${state.groups.map(g=>`<option value="${g.id}" ${d.groupId===g.id?'selected':''}>${g.icon||'📁'} ${esc(g.name)}</option>`).join('')}
         <option value="__new">＋ 새 그룹 만들기…</option>
@@ -869,10 +935,15 @@ function toggleRtMday(m){
   renderRoutineModal();
 }
 /* ----- 그룹 만들기 (전용 시트) ----- */
-let grpDraft=null;
-function openGroupModal(){
+let grpDraft=null, grpReturn='routine';
+function openGroupModal(ret){
   grpDraft={name:'',icon:'🪴'};
+  grpReturn=ret||'routine';
   renderGroupModal();
+}
+function grpBack(){
+  if(grpReturn==='datalist') openDataListSheet();
+  else renderRoutineModal();
 }
 function renderGroupModal(){
   const d=grpDraft;
@@ -880,14 +951,16 @@ function renderGroupModal(){
     <div class="frow"><label>그룹명 *</label><input placeholder="예: 식물, 운동, 공부" value="${esc(d.name)}" oninput="grpDraft.name=this.value"></div>
     <div class="frow"><label>그룹 아이콘</label><div class="emoji-grid">${EMOJIS.map(e=>`<button class="${d.icon===e?'on':''}" onclick="grpDraft.icon='${e}';renderGroupModal()">${e}</button>`).join('')}</div></div>
     <button class="btn" onclick="saveGroup()">그룹 만들기</button>
-    <button class="btn ghost" onclick="renderRoutineModal()">취소 (루틴으로 돌아가기)</button>
+    <button class="btn ghost" onclick="grpBack()">취소</button>
   `);
 }
 function saveGroup(){
   if(!grpDraft.name.trim()) return alert('그룹명을 입력해주세요');
   const g={id:uid(),name:grpDraft.name.trim(),icon:grpDraft.icon};
-  state.groups.push(g); rtDraft.groupId=g.id; save();
-  renderRoutineModal();
+  state.groups.push(g);
+  if(grpReturn==='routine'&&rtDraft) rtDraft.groupId=g.id;
+  save();
+  grpBack();
 }
 function saveRoutine(){
   const d=rtDraft;
@@ -908,14 +981,63 @@ function deleteRoutine(){
 /* ================= 후기 ================= */
 const MEDIA_EMOJIS=['🎬','🎭','🎤','🎧','📖','📚','🖼️','🎨','🎮','📺','🎫','🎪','💿','🎹','🏛️','✨'];
 function catLabel(c){ const ic=state.catIcons&&state.catIcons[c]; return (ic?ic+' ':'')+esc(c); }
+function rvMatch(r){
+  const ui=state.ui;
+  if(rvCatFilter&&r.category!==rvCatFilter) return false;
+  if(ui.rvYear&&r.date.slice(0,4)!==ui.rvYear) return false;
+  if(ui.rvStars&&ui.rvStars.length){
+    const b=r.rating?Math.floor(r.rating):0;
+    if(!ui.rvStars.includes(b)) return false;
+  }
+  return true;
+}
+function toggleRvStar(n){
+  const a=state.ui.rvStars, x=a.indexOf(n);
+  x>=0?a.splice(x,1):a.push(n);
+  save(); renderReviews();
+}
 function renderReviews(){
+  const ui=state.ui;
   const chips=document.getElementById('rv-cat-chips');
   chips.innerHTML=`<button class="cchip ${!rvCatFilter?'on':''}" onclick="rvCatFilter=null;renderReviews()">전체</button>`+
     state.categories.map(c=>`<button class="cchip ${rvCatFilter===c?'on':''}" onclick="rvCatFilter='${esc(c)}';renderReviews()">${catLabel(c)}</button>`).join('');
+  const years=[...new Set(state.reviews.map(r=>r.date.slice(0,4)))].sort().reverse();
+  const starChip=n=>`<button class="cchip ${ui.rvStars.includes(n)?'on':''}" style="padding:6px 10px;font-size:12px" onclick="toggleRvStar(${n})">${n===0?'별점 없음':'★'+n}</button>`;
+  const ctr=document.getElementById('rv-controls');
+  ctr.innerHTML=`<div style="display:flex;gap:8px;align-items:center;padding-bottom:10px">
+    <select style="flex:1.3;padding:9px 10px;font-size:13px" onchange="state.ui.rvSort=this.value;save();renderReviews()">
+      <option value="dateDesc" ${ui.rvSort==='dateDesc'?'selected':''}>시작일 느린 순</option>
+      <option value="dateAsc" ${ui.rvSort==='dateAsc'?'selected':''}>시작일 빠른 순</option>
+      <option value="ratingDesc" ${ui.rvSort==='ratingDesc'?'selected':''}>별점 높은 순</option>
+      <option value="ratingAsc" ${ui.rvSort==='ratingAsc'?'selected':''}>별점 낮은 순</option>
+    </select>
+    <select style="flex:1;padding:9px 10px;font-size:13px" onchange="state.ui.rvYear=this.value;save();renderReviews()">
+      <option value="" ${!ui.rvYear?'selected':''}>연도 전체</option>
+      ${years.map(y=>`<option value="${y}" ${ui.rvYear===y?'selected':''}>${y}년</option>`).join('')}
+    </select>
+  </div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;padding-bottom:10px">
+    ${[5,4,3,2,1,0].map(starChip).join('')}
+  </div>
+  <div class="seg" style="margin-bottom:14px">
+    ${['list','album','cal'].map(v=>`<button class="${ui.rvView===v?'on':''}" onclick="state.ui.rvView='${v}';save();renderReviews()">${v==='list'?'리스트':v==='album'?'앨범':'캘린더'}</button>`).join('')}
+  </div>`;
   const list=document.getElementById('review-list');
-  let arr=state.reviews.filter(r=>!rvCatFilter||r.category===rvCatFilter);
-  arr.sort((a,b)=>b.date.localeCompare(a.date));
-  if(!arr.length){ list.innerHTML='<div class="empty">아직 후기가 없어요.<br>본 공연·영화를 기록해보세요!</div>'; return; }
+  let arr=state.reviews.filter(rvMatch);
+  if(ui.rvSort==='ratingDesc') arr.sort((a,b)=>((b.rating||0)-(a.rating||0))||b.date.localeCompare(a.date));
+  else if(ui.rvSort==='ratingAsc') arr.sort((a,b)=>((a.rating||0)-(b.rating||0))||b.date.localeCompare(a.date));
+  else if(ui.rvSort==='dateAsc') arr.sort((a,b)=>a.date.localeCompare(b.date));
+  else arr.sort((a,b)=>b.date.localeCompare(a.date));
+  if(ui.rvView==='cal'){ renderReviewCal(list, arr); return; }
+  if(!arr.length){ list.innerHTML='<div class="empty">조건에 맞는 후기가 없어요</div>'; return; }
+  if(ui.rvView==='album'){
+    list.innerHTML='<div class="rv-album">'+arr.map(r=>`<div class="alb" onclick="openReviewModal('${r.id}')">
+      ${r.img?`<img class="ath" src="${esc(r.img)}" referrerpolicy="no-referrer">`:`<div class="ath">${state.catIcons[r.category]||'☆'}</div>`}
+      <div class="at">${r.round>1?r.round+'차 · ':''}${esc(r.title)}</div>
+      ${r.rating?`<div class="as">${starStr(r.rating)}</div>`:''}
+    </div>`).join('')+'</div>';
+    return;
+  }
   list.innerHTML=arr.map(r=>`<div class="rv-card" onclick="openReviewModal('${r.id}')">
     ${r.img?`<img class="rv-thumb" src="${esc(r.img)}" referrerpolicy="no-referrer" onerror="this.style.display='none'">`:''}
     <div class="rv-body">
@@ -925,6 +1047,48 @@ function renderReviews(){
       ${r.text?`<div class="rv-text">${esc(r.text)}</div>`:''}
     </div></div>`).join('');
 }
+/* ----- 후기 캘린더뷰 (포스터) ----- */
+function renderReviewCal(container, arr){
+  const byDate={};
+  arr.forEach(r=>{ (byDate[r.date]=byDate[r.date]||[]).push(r); });
+  const first=new Date(view.y,view.m,1);
+  const start=new Date(first); start.setDate(1-monIdx(first));
+  let cells='';
+  for(let i=0;i<42;i++){
+    const d=new Date(start); d.setDate(start.getDate()+i);
+    if(i===35&&d.getMonth()!==view.m) break;
+    const ds=fmt(d), other=d.getMonth()!==view.m;
+    const rs=byDate[ds]||[];
+    const r0=rs[0];
+    cells+=`<div class="rvc-cell ${other?'other':''}" ${rs.length?`onclick="openRvCalDay('${ds}')"`:''}>
+      ${r0?(r0.img?`<img src="${esc(r0.img)}" referrerpolicy="no-referrer">`:(state.catIcons[r0.category]||'☆')):''}
+      <span class="rvc-day">${d.getDate()}</span>
+      ${rs.length>1?`<span class="rvc-more">+${rs.length-1}</span>`:''}
+    </div>`;
+  }
+  container.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div class="month-nav">
+        <button class="icon-btn" onclick="moveMonth(-1)">‹</button>
+        <div class="mtitle" style="font-size:16px">${monthLabel(view.y,view.m)}</div>
+        <button class="icon-btn" onclick="moveMonth(1)">›</button>
+      </div>
+      <button class="today-btn" onclick="goToday()">이번달</button>
+    </div>
+    <div class="cal-week"><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span class="sat">토</span><span class="sun">일</span></div>
+    <div class="rvc-grid">${cells}</div>
+    <div style="font-size:11px;color:var(--sub);margin-top:10px">후기 시작일 기준으로 표시돼요. 셀을 탭하면 후기가 열려요.</div>`;
+}
+function openRvCalDay(ds){
+  const arr=state.reviews.filter(r=>r.date===ds&&rvMatch(r));
+  if(arr.length===1){ openReviewModal(arr[0].id); return; }
+  openSheet(ds+' 후기', arr.map(r=>`<div class="ds-item" onclick="openReviewModal('${r.id}')">
+    <span class="ds-badge" style="background:var(--review)"></span>
+    <div class="ds-main"><div class="ds-title">${r.round>1?r.round+'차 · ':''}${esc(r.title)}</div>
+    <div class="ds-sub">${catLabel(r.category)}${r.rating?' · '+starStr(r.rating):''}</div></div>
+  </div>`).join(''));
+}
+
 let rvDraft=null;
 function openReviewModal(id, preset, unified){
   unifiedAdd=!!unified;
@@ -939,30 +1103,28 @@ function addNthView(){
   rvDraft={id:null,title:src.title,category:src.category,date:todayStr(),endDate:'',rating:0,text:'',img:src.img,place:'',seat:'',ott:'',round:(src.round||1)+1,fromScheduleId:''};
   renderReviewModal();
 }
-const MOVIE_PLACES=['CGV','롯데시네마','메가박스','OTT','기타'];
-const OTT_LIST=['넷플릭스','디즈니+','티빙','웨이브','쿠팡플레이','왓챠','라프텔','기타'];
 function setRvPlace(v){
   rvDraft.place=v;
   if(v!=='OTT') rvDraft.ott='';
-  if(!['CGV','롯데시네마','메가박스'].includes(v)) rvDraft.seat='';
+  if(v==='OTT'||v===''||v==='기타') rvDraft.seat='';
   renderReviewModal();
 }
 function placeUI(d){
   if(d.category==='영화'){
-    const theater=['CGV','롯데시네마','메가박스'].includes(d.place);
+    const theater=d.place&&d.place!=='OTT'&&d.place!=='기타';
     let sub='';
     if(theater) sub=`<div class="frow"><label>좌석 (선택)</label><input placeholder="예: H열 12번, 리클라이너 A3" value="${esc(d.seat||'')}" oninput="rvDraft.seat=this.value"></div>`;
     else if(d.place==='OTT') sub=`<div class="frow"><label>어떤 OTT? (선택)</label><select onchange="rvDraft.ott=this.value">
       <option value="">선택 안 함</option>
-      ${OTT_LIST.map(o=>`<option value="${o}" ${d.ott===o?'selected':''}>${o}</option>`).join('')}</select></div>`;
+      ${state.ottList.map(o=>`<option value="${esc(o)}" ${d.ott===o?'selected':''}>${esc(o)}</option>`).join('')}</select></div>`;
     return `<div class="frow"><label>본 곳 (선택)</label><select onchange="setRvPlace(this.value)">
       <option value="">선택 안 함</option>
-      ${MOVIE_PLACES.map(p=>`<option value="${p}" ${d.place===p?'selected':''}>${p}</option>`).join('')}</select></div>${sub}`;
+      ${state.moviePlaces.map(p=>`<option value="${esc(p)}" ${d.place===p?'selected':''}>${esc(p)}</option>`).join('')}</select></div>${sub}`;
   }
   if(d.category==='애니메이션'){
     return `<div class="frow"><label>본 곳 (OTT, 선택)</label><select onchange="rvDraft.place=this.value">
       <option value="">선택 안 함</option>
-      ${OTT_LIST.map(o=>`<option value="${o}" ${d.place===o?'selected':''}>${o}</option>`).join('')}</select></div>`;
+      ${state.ottList.map(o=>`<option value="${esc(o)}" ${d.place===o?'selected':''}>${esc(o)}</option>`).join('')}</select></div>`;
   }
   return `<div class="frow-2">
     <div class="frow"><label>장소 (선택)</label><input placeholder="예: 샤롯데씨어터" value="${esc(d.place||'')}" oninput="rvDraft.place=this.value"></div>
@@ -972,10 +1134,15 @@ function placeUI(d){
 function searchPoster(){
   if(!rvDraft.title.trim()) return alert('제목을 먼저 입력하면 검색이 정확해져요');
   const q=encodeURIComponent(rvDraft.title.trim()+' 포스터');
-  const a=document.createElement('a');
-  a.href='https://www.google.com/search?udm=2&q='+q;
-  a.target='_blank'; a.rel='noopener';
-  document.body.appendChild(a); a.click(); a.remove();
+  if(/Android/i.test((typeof navigator!=='undefined'&&navigator.userAgent)||'')){
+    // 외부 브라우저(기본 브라우저 앱)로 열기
+    location.href='intent://search.naver.com/search.naver?where=image&query='+q+'#Intent;scheme=https;action=android.intent.action.VIEW;end';
+  } else {
+    const a=document.createElement('a');
+    a.href='https://search.naver.com/search.naver?where=image&query='+q;
+    a.target='_blank'; a.rel='noopener';
+    document.body.appendChild(a); a.click(); a.remove();
+  }
 }
 function normalizeImgUrl(u){
   u=(u||'').trim();
@@ -1095,7 +1262,7 @@ function renderCatModal(){
       ${MEDIA_EMOJIS.map(e=>`<button class="${d.icon===e?'on':''}" onclick="catDraft.icon='${e}';renderCatModal()">${e}</button>`).join('')}
     </div></div>
     <button class="btn" onclick="saveCat()">추가</button>
-    <button class="btn ghost" onclick="${catReturn==='review'?'renderReviewModal()':'closeSheet()'}">취소</button>
+    <button class="btn ghost" onclick="${catReturn==='review'?'renderReviewModal()':catReturn==='datalist'?'openDataListSheet()':'closeSheet()'}">취소</button>
   `);
 }
 function saveCat(){
@@ -1106,6 +1273,7 @@ function saveCat(){
   if(catDraft.icon) state.catIcons[name]=catDraft.icon;
   save();
   if(catReturn==='review'){ rvDraft.category=name; renderReviewModal(); }
+  else if(catReturn==='datalist') openDataListSheet();
   else closeSheet();
 }
 function saveReview(){
@@ -1157,6 +1325,50 @@ function renderNovel(){
         <span>주 ${goal.perWeek}회 페이스 <b style="color:var(--accent)">${pace.pct===null?'-':pace.pct+'%'}</b></span>
       </div>
     </div>`;
+  // 작업 기록 (캘린더/리스트 전환, 디폴트 캘린더)
+  document.getElementById('nv-log-toggle').innerHTML=
+    `<span class="seg" style="display:inline-flex;padding:2px">${['cal','list'].map(v=>`<button style="padding:5px 12px;font-size:12px" class="${state.ui.nvLogView===v?'on':''}" onclick="state.ui.nvLogView='${v}';save();renderNovel()">${v==='cal'?'캘린더':'리스트'}</button>`).join('')}</span>`;
+  const wlog=document.getElementById('novel-worklog');
+  const ms=fmt(new Date(view.y,view.m,1)), me=fmt(new Date(view.y,view.m+1,0));
+  if(state.ui.nvLogView==='cal'){
+    // 일별 집계: 글자수 합계 + 태그(집필 외 유형, 등록순)
+    const byDay={};
+    state.worklogs.forEach(l=>{
+      const d=byDay[l.date]=byDay[l.date]||{chars:0,tags:[]};
+      d.chars+=l.chars;
+      const k=l.kind||'write';
+      if(k!=='write'&&!d.tags.includes(LOG_KINDS[k])) d.tags.push(LOG_KINDS[k]);
+    });
+    const firstD=new Date(view.y,view.m,1), nDays=new Date(view.y,view.m+1,0).getDate(), tds2=todayStr();
+    let nc='';
+    for(let i=0;i<monIdx(firstD);i++) nc+='<div class="nlc-cell blank"></div>';
+    for(let dd=1;dd<=nDays;dd++){
+      const ds=fmt(new Date(view.y,view.m,dd));
+      const info=byDay[ds], future=ds>tds2;
+      let inner=`<span>${dd}</span>`;
+      if(info){
+        if(info.chars) inner+=`<span class="k">${nf(info.chars)}</span>`;
+        if(info.tags.length) inner+=`<span class="nlc-tag">${info.tags[0]}</span>`;
+        if(!info.chars&&!info.tags.length) inner+='<span class="k">✓</span>';
+      }
+      nc+=`<div class="nlc-cell ${info?'logged':''} ${future?'future':''}" ${future?'':`onclick="openDayLogs('${ds}')"`}>${inner}</div>`;
+    }
+    wlog.innerHTML=`<div class="card">
+      <div class="cal-week" style="padding-top:0"><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span class="sat">토</span><span class="sun">일</span></div>
+      <div class="mini-grid">${nc}</div>
+      <div style="font-size:11px;color:var(--sub);margin-top:10px">날짜를 탭하면 그날 기록을 보거나 추가할 수 있어요.</div>
+    </div>`;
+  } else {
+    const logs=state.worklogs.filter(l=>l.date>=ms&&l.date<=me).sort((a,b)=>b.date.localeCompare(a.date));
+    wlog.innerHTML='<div class="card">'+(logs.length ? logs.map(l=>{
+      const w=state.works.find(x=>x.id===l.workId);
+      const kind=l.kind||'write';
+      return `<div class="log-row"><span style="color:var(--sub)">${l.date.slice(5).replace('-','/')}</span>
+        <span style="flex:1;margin:0 12px">${w?esc(w.title):'삭제된 작품'}${kind!=='write'?` <span style="font-size:10.5px;color:var(--accent)">[${LOG_KINDS[kind]}]</span>`:''}</span>
+        <b>${l.chars?nf(l.chars)+'자':LOG_KINDS[kind]}</b>
+        <button style="color:var(--sub);margin-left:10px;font-size:12px" onclick="editLog('${l.id}')">수정</button></div>`;
+    }).join('') : '<div class="empty" style="padding:12px 0">이번달 기록이 없어요</div>')+'</div>';
+  }
   const wl=document.getElementById('work-list');
   if(!state.works.length){ wl.innerHTML='<div class="empty">아직 작품이 없어요.<br>첫 작품을 등록해보세요!</div>'; }
   else wl.innerHTML=state.works.map(w=>{
@@ -1179,16 +1391,6 @@ function renderNovel(){
       </div>
     </div>`;
   }).join('');
-  const ms=fmt(new Date(view.y,view.m,1)), me=fmt(new Date(view.y,view.m+1,0));
-  const logs=state.worklogs.filter(l=>l.date>=ms&&l.date<=me).sort((a,b)=>b.date.localeCompare(a.date));
-  document.getElementById('novel-logs').innerHTML = logs.length ? logs.map(l=>{
-    const w=state.works.find(x=>x.id===l.workId);
-    const kind=l.kind||'write';
-    return `<div class="log-row"><span style="color:var(--sub)">${l.date.slice(5).replace('-','/')}</span>
-      <span style="flex:1;margin:0 12px">${w?esc(w.title):'삭제된 작품'}${kind!=='write'?` <span style="font-size:10.5px;color:var(--accent)">[${LOG_KINDS[kind]}]</span>`:''}</span>
-      <b>${l.chars?nf(l.chars)+'자':LOG_KINDS[kind]}</b>
-      <button style="color:var(--sub);margin-left:10px;font-size:12px" onclick="editLog('${l.id}')">수정</button></div>`;
-  }).join('') : '<div class="empty" style="padding:12px 0">이번달 기록이 없어요</div>';
 }
 /* ----- 작품 등록/수정 ----- */
 let workDraft=null;
@@ -1316,13 +1518,23 @@ function deleteEp(wid,ep){
   save(); openWorkDetail(wid);
 }
 /* ----- 출간/교정 ----- */
+let pubDraft=null;
 function addPub(wid){
+  pubDraft={wid, label:'', date:todayStr()};
   const w=state.works.find(x=>x.id===wid);
-  const label=prompt('출간 명칭 (예: 1권, 단행본, e북)'); if(label===null) return;
-  const date=prompt('출간일 (YYYY-MM-DD)', todayStr());
-  if(!date||!/^\d{4}-\d{2}-\d{2}$/.test(date)) return alert('날짜 형식이 올바르지 않아요');
-  w.pubs=w.pubs||[]; w.pubs.push({label:label.trim()||'출간',date});
-  save(); openWorkDetail(wid);
+  openSheet('출간 일정 · '+esc(w.title), `
+    <div class="frow"><label>출간 명칭</label><input placeholder="예: 1권, 단행본, e북, 완결권" value="" oninput="pubDraft.label=this.value"></div>
+    <div class="frow"><label>출간일 *</label><input type="date" value="${pubDraft.date}" onchange="pubDraft.date=this.value"></div>
+    <div style="font-size:11px;color:var(--sub);margin:-6px 0 14px">등록하면 캘린더에 "작품명 출간"으로 자동 표시돼요.</div>
+    <button class="btn" onclick="savePub()">등록</button>
+    <button class="btn ghost" onclick="openWorkDetail('${wid}')">취소</button>
+  `);
+}
+function savePub(){
+  const d=pubDraft, w=state.works.find(x=>x.id===d.wid);
+  if(!d.date) return alert('출간일을 선택해주세요');
+  w.pubs=w.pubs||[]; w.pubs.push({label:d.label.trim()||'출간', date:d.date});
+  save(); openWorkDetail(d.wid);
 }
 function deletePub(wid,i){
   const w=state.works.find(x=>x.id===wid);
@@ -1337,10 +1549,25 @@ function addProof(wid){
 }
 /* ----- 작업 기록 ----- */
 let logDraft=null;
-function openLogModal(wid){
+function fmtK(n){ return n>=1000 ? (Math.round(n/100)/10)+'k' : ''+n; }
+function openLogModal(wid, date){
   if(!state.works.length){ alert('먼저 작품을 등록해주세요'); openWorkModal(); return; }
-  logDraft={id:null, date:todayStr(), workId:wid||state.works[0].id, chars:'', kind:'write'};
+  logDraft={id:null, date:date||todayStr(), workId:wid||state.works[0].id, chars:'', kind:'write'};
   renderLogModal();
+}
+function openDayLogs(ds){
+  const logs=state.worklogs.filter(l=>l.date===ds);
+  if(!logs.length){ openLogModal(null, ds); return; }
+  const d=parse(ds);
+  openSheet(`${d.getMonth()+1}월 ${d.getDate()}일 작업 기록`, logs.map(l=>{
+    const w=state.works.find(x=>x.id===l.workId), kind=l.kind||'write';
+    return `<div class="ds-item" onclick="editLog('${l.id}')">
+      <span class="ds-badge" style="background:var(--accent)"></span>
+      <div class="ds-main"><div class="ds-title">${w?esc(w.title):'삭제된 작품'}</div>
+      <div class="ds-sub">${LOG_KINDS[kind]}${l.chars?' · '+nf(l.chars)+'자':''}</div></div>
+      <span style="font-size:12px;color:var(--sub)">수정 ›</span>
+    </div>`;
+  }).join('')+`<button class="btn ghost" style="margin-top:14px" onclick="openLogModal(null,'${ds}')">＋ 이 날짜에 기록 추가</button>`);
 }
 function editLog(id){
   const l=state.worklogs.find(x=>x.id===id); if(!l) return;
@@ -1403,40 +1630,83 @@ function renderSettings(){
         <button class="btn" style="margin-top:0" onclick="connectDrive()">구글 계정 연결</button>`;
     }
   }
-  const el=document.getElementById('cat-manage');
-  el.innerHTML=state.categories.map(c=>`<div class="settings-row"><span>${catLabel(c)}</span>
-    <span style="display:flex;gap:12px">
-      <button style="color:var(--accent);font-size:13px" onclick="editCatIcon('${esc(c)}')">아이콘</button>
-      <button style="color:var(--danger);font-size:13px" onclick="removeCategory('${esc(c)}')">삭제</button>
-    </span></div>`).join('')+
-    `<div class="settings-row" onclick="openCatModal('settings')" style="color:var(--accent);font-weight:600">＋ 카테고리 추가</div>`;
-  const tg=document.getElementById('tag-manage');
-  tg.innerHTML=state.schedTags.map(t=>`<div class="settings-row"><span>#${esc(t)}</span>
-    <button style="color:var(--danger);font-size:13px" onclick="removeSchedTag('${esc(t)}')">삭제</button></div>`).join('')+
-    `<div class="settings-row" onclick="addSchedTagFromSettings()" style="color:var(--accent);font-weight:600">＋ 태그 추가</div>`;
+}
+/* ----- 데이터 리스트 관리 ----- */
+function dlRow(label, actions){
+  return `<div class="settings-row" style="padding:12px 2px"><span>${label}</span><span style="display:flex;gap:12px">${actions}</span></div>`;
+}
+function openDataListSheet(){
+  const del=(fn,arg)=>`<button style="color:var(--danger);font-size:13px" onclick="${fn}('${esc(arg)}')">삭제</button>`;
+  let html='<div class="sec-title" style="margin-top:0">후기 카테고리</div><div class="card">';
+  html+=state.categories.map(c=>dlRow(catLabel(c),
+    `<button style="color:var(--accent);font-size:13px" onclick="editCatIcon('${esc(c)}')">아이콘</button>`+del('removeCategory',c))).join('');
+  html+=`<div class="settings-row" style="color:var(--accent);font-weight:600" onclick="openCatModal('datalist')">＋ 카테고리 추가</div></div>`;
+  html+='<div class="sec-title">스케줄 태그</div><div class="card">';
+  html+=state.schedTags.map(t=>dlRow('#'+esc(t), del('removeSchedTag',t))).join('');
+  html+=`<div class="settings-row" style="color:var(--accent);font-weight:600" onclick="addSchedTagDL()">＋ 태그 추가</div></div>`;
+  html+='<div class="sec-title">후기 · 본 곳 (영화)</div><div class="card">';
+  html+=state.moviePlaces.map(p=>dlRow(esc(p)+(p==='OTT'?' <span style="font-size:10px;color:var(--sub)">(OTT 선택 연결)</span>':''),
+    p==='OTT'?'<span style="font-size:12px;color:var(--sub)">고정</span>':del('removeMoviePlace',p))).join('');
+  html+=`<div class="settings-row" style="color:var(--accent);font-weight:600" onclick="addMoviePlace()">＋ 본 곳 추가</div></div>`;
+  html+='<div class="sec-title">후기 · OTT 서비스</div><div class="card">';
+  html+=state.ottList.map(o=>dlRow(esc(o), del('removeOtt',o))).join('');
+  html+=`<div class="settings-row" style="color:var(--accent);font-weight:600" onclick="addOtt()">＋ OTT 추가</div></div>`;
+  html+='<div class="sec-title">루틴 그룹</div><div class="card">';
+  html+=state.groups.length?state.groups.map(g=>dlRow((g.icon||'📁')+' '+esc(g.name), del('removeGroupDL',g.id))).join(''):'<div class="empty" style="padding:10px 0">그룹 없음</div>';
+  html+=`<div class="settings-row" style="color:var(--accent);font-weight:600" onclick="openGroupModal('datalist')">＋ 그룹 추가</div></div>`;
+  openSheet('데이터 리스트 관리', html);
 }
 function removeSchedTag(t){
   if(state.schedules.some(s=>s.tag===t)) return alert('이 태그를 쓰는 스케줄이 있어 삭제할 수 없어요');
   if(!confirm(`'${t}' 태그를 삭제할까요?`)) return;
   state.schedTags=state.schedTags.filter(x=>x!==t);
   state.filters.exSchedTags=state.filters.exSchedTags.filter(x=>x!==t);
-  save(); renderSettings();
+  save(); openDataListSheet();
 }
-function addSchedTagFromSettings(){
+function addSchedTagDL(){
   const name=prompt('새 태그 이름 (예: LOL, 웹소설)');
-  if(name&&name.trim()&&!state.schedTags.includes(name.trim())){ state.schedTags.push(name.trim()); save(); renderSettings(); }
+  if(name&&name.trim()&&!state.schedTags.includes(name.trim())){ state.schedTags.push(name.trim()); save(); }
+  openDataListSheet();
 }
 function removeCategory(c){
   if(state.reviews.some(r=>r.category===c)) return alert('이 카테고리를 쓰는 후기가 있어 삭제할 수 없어요');
   if(!confirm(`'${c}' 카테고리를 삭제할까요?`)) return;
-  state.categories=state.categories.filter(x=>x!==c); save(); renderSettings();
+  state.categories=state.categories.filter(x=>x!==c); save(); openDataListSheet();
 }
 function editCatIcon(c){
   const cur=state.catIcons[c]||'';
   const ic=prompt('아이콘 이모지 1개 (비우면 아이콘 제거)', cur);
   if(ic===null) return;
   if(ic.trim()) state.catIcons[c]=ic.trim(); else delete state.catIcons[c];
-  save(); renderSettings();
+  save(); openDataListSheet();
+}
+function addMoviePlace(){
+  const name=prompt('새 본 곳 이름 (예: 씨네큐브, 자동차극장)');
+  if(name&&name.trim()&&!state.moviePlaces.includes(name.trim())){ state.moviePlaces.splice(Math.max(0,state.moviePlaces.length-1),0,name.trim()); save(); }
+  openDataListSheet();
+}
+function removeMoviePlace(p){
+  if(state.reviews.some(r=>r.place===p)) return alert('이 값을 쓰는 후기가 있어 삭제할 수 없어요');
+  if(!confirm(`'${p}'을(를) 삭제할까요?`)) return;
+  state.moviePlaces=state.moviePlaces.filter(x=>x!==p); save(); openDataListSheet();
+}
+function addOtt(){
+  const name=prompt('새 OTT 이름');
+  if(name&&name.trim()&&!state.ottList.includes(name.trim())){ state.ottList.splice(Math.max(0,state.ottList.length-1),0,name.trim()); save(); }
+  openDataListSheet();
+}
+function removeOtt(o){
+  if(state.reviews.some(r=>r.ott===o||r.place===o)) return alert('이 값을 쓰는 후기가 있어 삭제할 수 없어요');
+  if(!confirm(`'${o}'을(를) 삭제할까요?`)) return;
+  state.ottList=state.ottList.filter(x=>x!==o); save(); openDataListSheet();
+}
+function removeGroupDL(id){
+  const g=state.groups.find(x=>x.id===id); if(!g) return;
+  const used=state.routines.filter(r=>r.groupId===id).length;
+  if(!confirm(`'${g.name}' 그룹을 삭제할까요?${used?` (루틴 ${used}개는 그룹 없음으로 이동)`:''}`)) return;
+  state.routines.forEach(r=>{ if(r.groupId===id) r.groupId=''; });
+  state.groups=state.groups.filter(x=>x.id!==id);
+  save(); openDataListSheet();
 }
 function exportData(){
   const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
@@ -1511,10 +1781,26 @@ function connectDrive(){
   if(!initTokenClient()) return alert('구글 연결 스크립트를 아직 불러오는 중이에요. 잠시 후 다시 시도해주세요.');
   tokenClient.requestAccessToken({prompt:''});
 }
+let pendingSilent=false;
+function cacheToken(tok, expiresIn){
+  localStorage.setItem('psm_tok', tok);
+  localStorage.setItem('psm_tokExp', String(Date.now()+((+expiresIn||3600)-90)*1000));
+}
+function clearTokenCache(){ localStorage.removeItem('psm_tok'); localStorage.removeItem('psm_tokExp'); }
+/* 팝업 차단 회피: 다음 화면 터치 시점(사용자 제스처)에 무음 토큰 요청 */
+function armSilentAuth(){
+  if(pendingSilent||typeof document==='undefined'||!document.addEventListener) return;
+  pendingSilent=true;
+  const h=()=>{ pendingSilent=false;
+    if(initTokenClient()) tokenClient.requestAccessToken({prompt:''});
+  };
+  document.addEventListener('pointerdown', h, {once:true});
+}
 function onGToken(resp){
-  if(resp.error){ syncStatus.connected=false; if(currentTab==='settings')renderSettings(); return; }
+  if(resp.error){ syncStatus.connected=false; armSilentAuth(); if(currentTab==='settings')renderSettings(); return; }
   gToken=resp.access_token; syncStatus.connected=true;
   localStorage.setItem('psm_syncOn','1');
+  cacheToken(resp.access_token, resp.expires_in);
   syncNow();
   if(state.filters.gcal) fetchGcalMonth(true);
   if(currentTab==='settings') renderSettings();
@@ -1523,12 +1809,13 @@ function disconnectDrive(){
   if(gToken&&typeof google!=='undefined') try{ google.accounts.oauth2.revoke(gToken); }catch(e){}
   gToken=null; syncStatus.connected=false;
   localStorage.removeItem('psm_syncOn');
+  clearTokenCache();
   renderSettings();
 }
 async function gfetch(url,opt={}){
   opt.headers=Object.assign({},opt.headers,{Authorization:'Bearer '+gToken});
   const r=await fetch(url,opt);
-  if(r.status===401){ gToken=null; syncStatus.connected=false; throw new Error('auth'); }
+  if(r.status===401){ gToken=null; syncStatus.connected=false; clearTokenCache(); armSilentAuth(); throw new Error('auth'); }
   if(!r.ok) throw new Error('http '+r.status);
   return r;
 }
@@ -1618,16 +1905,18 @@ async function fetchGcalMonth(force){
     if(currentTab==='cal') renderCalendar();
   }catch(e){}
 }
-/* 자동 연결: 이전에 연결한 적 있으면 조용히 토큰 요청 */
+/* 자동 연결: ① 캐시된 토큰이 유효하면 즉시 재사용 ② 만료면 첫 터치 시 무음 재발급 */
 if(typeof window!=='undefined'){
   window.addEventListener('load',()=>{
-    if(localStorage.getItem('psm_syncOn')==='1'){
-      let tries=0;
-      const t=setInterval(()=>{
-        tries++;
-        if(initTokenClient()){ clearInterval(t); tokenClient.requestAccessToken({prompt:''}); }
-        else if(tries>20) clearInterval(t);
-      },500);
+    if(localStorage.getItem('psm_syncOn')!=='1') return;
+    const tok=localStorage.getItem('psm_tok'), exp=+localStorage.getItem('psm_tokExp')||0;
+    if(tok && Date.now()<exp){
+      gToken=tok; syncStatus.connected=true;
+      syncNow();
+      if(state.filters.gcal) setTimeout(()=>fetchGcalMonth(true),300);
+      if(currentTab==='settings') renderSettings();
+    } else {
+      armSilentAuth();
     }
   });
 }
@@ -1668,6 +1957,21 @@ function handleLaunchParams(){
   }catch(e){}
 }
 if(typeof window!=='undefined'){ window.addEventListener('DOMContentLoaded',handleLaunchParams); }
+
+/* ===== 캘린더 좌우 스와이프로 월 이동 ===== */
+if(typeof window!=='undefined'){
+  window.addEventListener('DOMContentLoaded',()=>{
+    if(!document.querySelector) return;
+    const el=document.querySelector('.cal-wrap');
+    if(!el) return;
+    let sx=0, sy=0;
+    el.addEventListener('touchstart',e=>{ sx=e.touches[0].clientX; sy=e.touches[0].clientY; },{passive:true});
+    el.addEventListener('touchend',e=>{
+      const dx=e.changedTouches[0].clientX-sx, dy=e.changedTouches[0].clientY-sy;
+      if(Math.abs(dx)>60 && Math.abs(dy)<50) moveMonth(dx<0?1:-1);
+    },{passive:true});
+  });
+}
 
 /* ================= 메인 렌더 ================= */
 function render(){
