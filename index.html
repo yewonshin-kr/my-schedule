@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#0F1412">
 <link rel="manifest" href="manifest.webmanifest">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <title>마이 스케줄</title>
 <style>
 :root{
@@ -62,6 +63,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
 .evt{font-size:10.5px;line-height:1.3;padding:2px 4px;border-radius:5px;color:var(--ondark);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .evt.sched{background:var(--sched)}.evt.review{background:var(--review)}
 .evt.novel{background:transparent;color:var(--accent);border:1px solid var(--accent);font-weight:600}
+.evt.gcal{background:#2E3A34;color:#BFD9CB}
 .status-badge{font-size:10.5px;font-weight:700;border-radius:6px;padding:3px 8px;white-space:nowrap}
 .st-ongoing{color:var(--accent);background:var(--accent-soft)}
 .st-prep{color:var(--sub);background:var(--chip)}
@@ -141,6 +143,10 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
 .seg{display:flex;background:var(--chip);border-radius:12px;padding:3px;gap:3px}
 .seg button{flex:1;padding:9px 4px;border-radius:10px;font-size:13px;font-weight:600;color:var(--sub)}
 .seg button.on{background:#2E3A33;color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.25)}
+.mday-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:4px}
+.mday-grid button{aspect-ratio:1;border-radius:9px;background:var(--chip);font-size:12px;font-weight:600;color:var(--sub)}
+.mday-grid button.on{background:var(--accent);color:var(--ondark)}
+.mday-grid button.wide{aspect-ratio:auto;grid-column:span 2}
 .daypick{display:flex;gap:6px}
 .daypick button{flex:1;aspect-ratio:1;max-width:46px;border-radius:50%;background:var(--chip);font-size:13px;font-weight:600;color:var(--sub)}
 .daypick button.on{background:var(--accent);color:var(--ondark)}
@@ -259,6 +265,9 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
 <div id="page-settings" class="hidden">
   <div class="hdr"><div class="hdr-row"><h1>설정</h1></div></div>
   <div class="page">
+    <div class="sec-title" style="margin-top:16px">구글 드라이브 동기화</div>
+    <div class="card" id="sync-card"></div>
+    <div class="sec-title">데이터</div>
     <div class="card">
       <div class="settings-row" onclick="document.getElementById('ics-file').click()">
         <div>구글 캘린더 가져오기<div class="desc">구글 캘린더에서 내보낸 .ics 파일을 가져와요</div></div><span>›</span>
@@ -278,7 +287,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
     <div class="card" id="cat-manage"></div>
     <div class="sec-title">안내</div>
     <div class="card" style="font-size:12.5px;color:var(--sub);line-height:1.6">
-      데이터는 이 브라우저에만 저장돼요. 폰 브라우저(Safari/Chrome)에서 이 파일을 연 뒤 <b>공유 → 홈 화면에 추가</b>하면 앱처럼 쓸 수 있어요. 기기를 바꾸기 전엔 꼭 데이터 백업을 해주세요.
+      드라이브 동기화를 연결하면 데이터가 내 구글 드라이브(my-schedule-data.json)에 자동 저장되고, 다른 기기에서도 이어서 쓸 수 있어요. 연결하지 않으면 이 브라우저에만 저장되니 데이터 백업을 활용해주세요.
     </div>
   </div>
 </div>
@@ -317,15 +326,31 @@ function load(){
       s.novelGoal = s.novelGoal||{perWeek:5, monthlyChars:0};
       s.filters.novel = s.filters.novel!==false;
       s.filters.jpHol = !!s.filters.jpHol;
-      (s.schedules||[]).forEach(x=>{ if(x.type==='ticket') x.type='once'; }); // 티켓팅 유형 통합
+      s.filters.gcal = !!s.filters.gcal;
+      (s.schedules||[]).forEach(x=>{
+        if(x.type==='ticket') x.type='once'; // 티켓팅 유형 통합
+        if(x.type==='recurring'&&!x.recur) x.recur={freq:'weekly',interval:1,days:x.days||[]};
+      });
+      (s.routines||[]).forEach(r=>{
+        if(!r.recur){
+          if(r.goalType==='fixed') r.recur={freq:'weekly',interval:1,days:r.days||[]};
+          else if(r.goalType==='interval') r.recur={freq:'daily',interval:r.interval||7};
+          else r.recur={freq:'flex',perWeek:r.perWeek||3};
+        }
+      });
+      s.catIcons = s.catIcons||{};
       return s;
     }
   }catch(e){}
-  return { schedules:[], routines:[], groups:[], reviews:[], categories:[...DEFAULT_CATS], schedTags:['LOL'],
+  return { schedules:[], routines:[], groups:[], reviews:[], categories:[...DEFAULT_CATS], catIcons:{}, schedTags:['LOL'],
     works:[], worklogs:[], novelGoal:{perWeek:5, monthlyChars:0},
     filters:{sched:true,routine:true,review:true, novel:true, exSchedTypes:[], exSchedTags:[], exRoutines:[], exCats:[]} };
 }
-function save(){ localStorage.setItem('psm_v1', JSON.stringify(state)); }
+function save(){
+  state.updatedAt=new Date().toISOString();
+  localStorage.setItem('psm_v1', JSON.stringify(state));
+  if(typeof scheduleCloudSave==='function') scheduleCloudSave();
+}
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 
 /* ================= 날짜 유틸 ================= */
@@ -341,8 +366,8 @@ function monthLabel(y,m){ return y+'년 '+(m+1)+'월'; }
 let view = { y:new Date().getFullYear(), m:new Date().getMonth() };
 let currentTab='cal', detailRoutineId=null, rvCatFilter=null;
 
-function moveMonth(n){ view.m+=n; if(view.m<0){view.m=11;view.y--;} if(view.m>11){view.m=0;view.y++;} render(); }
-function goToday(){ const t=new Date(); view={y:t.getFullYear(),m:t.getMonth()}; render(); }
+function moveMonth(n){ view.m+=n; if(view.m<0){view.m=11;view.y--;} if(view.m>11){view.m=0;view.y++;} render(); if(typeof fetchGcalMonth==='function') fetchGcalMonth(); }
+function goToday(){ const t=new Date(); view={y:t.getFullYear(),m:t.getMonth()}; render(); if(typeof fetchGcalMonth==='function') fetchGcalMonth(); }
 
 /* ================= 탭 ================= */
 function switchTab(t){
@@ -366,20 +391,46 @@ const HOL_JP={
 '2027-01-01':'元日','2027-01-11':'成人の日','2027-02-11':'建国記念の日','2027-02-23':'天皇誕生日','2027-03-21':'春分の日','2027-03-22':'振替休日','2027-04-29':'昭和の日','2027-05-03':'憲法記念日','2027-05-04':'みどりの日','2027-05-05':'こどもの日','2027-07-19':'海の日','2027-08-11':'山の日','2027-09-20':'敬老の日','2027-09-23':'秋分の日','2027-10-11':'スポーツの日','2027-11-03':'文化の日','2027-11-23':'勤労感謝の日'
 };
 
+/* ================= 반복 규칙 (통일 모델) =================
+   recur = {freq:'weekly', interval:N주, days:[요일]} | {freq:'daily', interval:N일} | {freq:'flex', perWeek:N} */
+function weekMonday(ds){ const d=parse(ds); d.setDate(d.getDate()-monIdx(d)); return fmt(d); }
+function weeksBetween(a,b){ return Math.round(diffDays(weekMonday(a),weekMonday(b))/7); }
+function recurOn(rc, anchor, ds){
+  if(ds<anchor) return false;
+  if(rc.freq==='weekly'){
+    if(!rc.days||!rc.days.includes(monIdx(parse(ds)))) return false;
+    return weeksBetween(anchor,ds) % (rc.interval||1) === 0;
+  }
+  if(rc.freq==='daily') return diffDays(anchor,ds) % (rc.interval||1) === 0;
+  if(rc.freq==='monthly'){
+    const d=parse(ds), day=d.getDate(), lastDay=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
+    return (rc.mdays||[]).some(m=>m==='L'?day===lastDay:+m===day);
+  }
+  return false; // flex: 고정 요일 없음
+}
+function recurText(rc){
+  if(!rc) return '';
+  if(rc.freq==='weekly'){ const iv=rc.interval||1; return (iv===1?'매주 ':iv+'주마다 ')+(rc.days||[]).map(i=>DAY_LABEL[i]).join('·'); }
+  if(rc.freq==='daily') return (rc.interval||1)===1?'매일':(rc.interval)+'일마다';
+  if(rc.freq==='monthly') return '매월 '+(rc.mdays||[]).map(m=>m==='L'?'말일':m+'일').join('·');
+  return '주 '+rc.perWeek+'회';
+}
+function mdayGrid(mdays, cb){
+  return `<div class="mday-grid">${[...Array(31)].map((_,i)=>`<button class="${mdays.includes(i+1)?'on':''}" onclick="${cb}(${i+1})">${i+1}</button>`).join('')}<button class="wide ${mdays.includes('L')?'on':''}" onclick="${cb}('L')">말일</button></div>`;
+}
+
 /* ================= 발생 판정 ================= */
 function schedOccursOn(s,ds){
   if(s.type==='recurring'){
     if(ds < s.date) return false;
     if(s.endDate && ds > s.endDate) return false;
-    return s.days.includes(monIdx(parse(ds)));
+    return recurOn(s.recur||{freq:'weekly',interval:1,days:s.days||[]}, s.date, ds);
   }
   return s.date<=ds && ds<=(s.endDate||s.date);
 }
 function routineGoalOn(r,ds){
   if(ds < r.startDate) return false;
-  if(r.goalType==='fixed') return r.days.includes(monIdx(parse(ds)));
-  if(r.goalType==='interval') return diffDays(r.startDate,ds) % r.interval === 0;
-  return false; // perWeek: 특정 요일 지정 없음
+  return recurOn(r.recur, r.startDate, ds);
 }
 function reviewOn(rv,ds){ return rv.date<=ds && ds<=(rv.endDate||rv.date); }
 
@@ -403,6 +454,7 @@ function openFilterSheet(){
   let html='<div class="sec-title" style="margin-top:0">공휴일</div><div class="check-list">';
   html+='<label><input type="checkbox" checked disabled>한국 공휴일 (항상 표시)</label>';
   html+=`<label><input type="checkbox" ${f.jpHol?'checked':''} onchange="state.filters.jpHol=this.checked;save();renderCalendar()">일본 공휴일</label>`;
+  html+=`<label><input type="checkbox" ${f.gcal?'checked':''} onchange="state.filters.gcal=this.checked;save();if(this.checked)fetchGcalMonth(true);renderCalendar()">구글 캘린더 일정 (드라이브 연결 필요)</label>`;
   html+='</div><div class="sec-title">스케줄 유형</div><div class="check-list">';
   schedTypes.forEach(([k,l])=>{ html+=`<label><input type="checkbox" ${!f.exSchedTypes.includes(k)?'checked':''} onchange="toggleEx('exSchedTypes','${k}')">${l}</label>`; });
   if(state.schedTags.length){
@@ -413,7 +465,7 @@ function openFilterSheet(){
   if(!state.routines.length) html+='<div class="empty" style="padding:8px 0">등록된 루틴이 없어요</div>';
   state.routines.forEach(r=>{ html+=`<label><input type="checkbox" ${!f.exRoutines.includes(r.id)?'checked':''} onchange="toggleEx('exRoutines','${r.id}')">${r.icon} ${esc(r.name)}</label>`; });
   html+='</div><div class="sec-title">후기 카테고리</div><div class="check-list">';
-  state.categories.forEach(c=>{ html+=`<label><input type="checkbox" ${!f.exCats.includes(c)?'checked':''} onchange="toggleEx('exCats','${esc(c)}')">${esc(c)}</label>`; });
+  state.categories.forEach(c=>{ html+=`<label><input type="checkbox" ${!f.exCats.includes(c)?'checked':''} onchange="toggleEx('exCats','${esc(c)}')">${catLabel(c)}</label>`; });
   html+='</div>';
   openSheet('캘린더 상세 필터', html);
 }
@@ -427,12 +479,13 @@ function toggleEx(key,val){
 function dayItems(ds){
   const f=state.filters, out={scheds:[],routines:[],reviews:[],novel:[]};
   if(f.sched) out.scheds = state.schedules.filter(s=>!f.exSchedTypes.includes(s.type)&&!(s.tag&&f.exSchedTags.includes(s.tag))&&schedOccursOn(s,ds));
-  if(f.routine) out.routines = state.routines.filter(r=>!f.exRoutines.includes(r.id)&&(routineGoalOn(r,ds)||r.checks[ds]||(r.goalType==='perWeek'&&ds<=todayStr()&&ds>=r.startDate)));
+  if(f.routine) out.routines = state.routines.filter(r=>!f.exRoutines.includes(r.id)&&(routineGoalOn(r,ds)||r.checks[ds]||(r.recur.freq==='flex'&&ds<=todayStr()&&ds>=r.startDate)));
   if(f.review) out.reviews = state.reviews.filter(rv=>!f.exCats.includes(rv.category)&&reviewOn(rv,ds));
   if(f.novel) state.works.forEach(w=>{
     w.episodes.forEach(e=>{ if(e.date===ds) out.novel.push({wid:w.id, t:w.title+' '+e.ep+'화', sub:'회차 업로드'}); });
     (w.pubs||[]).forEach(p=>{ if(p.date===ds) out.novel.push({wid:w.id, t:w.title+' '+(p.label||'출간'), sub:'출간'}); });
   });
+  out.gcal = (f.gcal&&typeof gcalOn==='function') ? gcalOn(ds) : [];
   return out;
 }
 function renderCalendar(){
@@ -454,6 +507,7 @@ function renderCalendar(){
     if(hj) inner+=`<div class="hol jp">${hj}</div>`;
     const evts=[
       ...it.scheds.map(s=>({t:s.title,cls:'sched'})),
+      ...it.gcal.map(g=>({t:g.title,cls:'gcal'})),
       ...it.novel.map(n=>({t:n.t,cls:'novel'})),
       ...it.reviews.map(r=>({t:r.title,cls:'review'}))
     ];
@@ -475,7 +529,13 @@ function openDaySheet(ds){
   let html='';
   const hols=[HOL_KR[ds]&&'🇰🇷 '+HOL_KR[ds], state.filters.jpHol&&HOL_JP[ds]&&'🇯🇵 '+HOL_JP[ds]].filter(Boolean);
   if(hols.length) html+=`<div style="font-size:12.5px;color:#C98A8A;font-weight:600;margin-bottom:10px">${hols.join(' · ')}</div>`;
-  if(it.scheds.length||it.reviews.length||it.routines.length||it.novel.length){
+  if(it.scheds.length||it.reviews.length||it.routines.length||it.novel.length||it.gcal.length){
+    it.gcal.forEach(g=>{
+      html+=`<div class="ds-item">
+        <span class="ds-badge" style="background:#5E8871"></span>
+        <div class="ds-main"><div class="ds-title">${esc(g.title)}</div><div class="ds-sub">${g.time?g.time+' · ':''}구글 캘린더</div></div>
+      </div>`;
+    });
     it.novel.forEach(n=>{
       html+=`<div class="ds-item" onclick="closeSheet();switchTab('novel');openWorkDetail('${n.wid}')">
         <span class="ds-badge" style="background:transparent;border:2px solid var(--accent)"></span>
@@ -490,7 +550,7 @@ function openDaySheet(ds){
         <span class="ds-badge" style="background:var(--sched)"></span>
         <div class="ds-main" onclick="openScheduleModal('${s.id}')">
           <div class="ds-title">${esc(s.title)}${linked?' <span style="font-size:10px;color:var(--review);border:1px solid var(--review);border-radius:5px;padding:1px 5px;vertical-align:1px">후기</span>':''}</div>
-          <div class="ds-sub">${s.tag?'#'+esc(s.tag)+' · ':''}${s.time?s.time+' · ':''}${s.type==='once'?(period||'일회성'):'정기 ('+s.days.map(i=>DAY_LABEL[i]).join('')+')'}${s.memo?' · '+esc(s.memo):''}</div>
+          <div class="ds-sub">${s.tag?'#'+esc(s.tag)+' · ':''}${s.time?s.time+' · ':''}${s.type==='once'?(period||'일회성'):'정기 · '+recurText(s.recur)}${s.memo?' · '+esc(s.memo):''}</div>
         </div>
         ${isPast?`<button class="mini-act" onclick="event.stopPropagation();reviewFromSchedule('${s.id}','${ds}')">${linked?'후기 보기':'후기 쓰기'}</button>`:''}
       </div>`;
@@ -511,7 +571,7 @@ function openDaySheet(ds){
         <span class="ds-badge" style="background:var(--review)"></span>
         <div class="ds-main">
           <div class="ds-title">${esc(rv.title)}</div>
-          <div class="ds-sub">${esc(rv.category)}${rv.rating?' · '+starStr(rv.rating):''}</div>
+          <div class="ds-sub">${catLabel(rv.category)}${rv.rating?' · '+starStr(rv.rating):''}</div>
         </div>
       </div>`;
     });
@@ -530,7 +590,7 @@ function openSheet(title, bodyHtml, onclose){
 }
 function closeSheet(){ document.getElementById('modal-root').innerHTML=''; render(); }
 function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function starStr(n){ let s='★'.repeat(Math.floor(n)); if(n%1) s+='½'; return s; }
+function starStr(n){ let s='★'.repeat(Math.floor(n)); if(n%1) s+='☆'; return s; }
 
 /* ================= 통합 등록 ================= */
 let unifiedAdd=false, unifiedDate=null;
@@ -555,8 +615,12 @@ function openScheduleModal(id, presetDate, unified){
   unifiedAdd=!!unified;
   const s = id ? state.schedules.find(x=>x.id===id) : null;
   schedDraft = s ? JSON.parse(JSON.stringify(s)) :
-    {id:null,title:'',type:'once',date:presetDate||todayStr(),endDate:'',time:'',days:[],memo:'',tag:''};
+    {id:null,title:'',type:'once',date:presetDate||todayStr(),endDate:'',time:'',days:[],memo:'',tag:'',recur:{freq:'weekly',interval:1,days:[]}};
+  if(!schedDraft.recur) schedDraft.recur={freq:'weekly',interval:1,days:schedDraft.days||[]};
   renderScheduleModal();
+}
+function intervalSelect(rc, cb){
+  return `<select onchange="${cb}(+this.value)">${[1,2,3,4].map(n=>`<option value="${n}" ${(rc.interval||1)===n?'selected':''}>${n===1?'매주':n+'주마다'}</option>`).join('')}</select>`;
 }
 function addSchedTag(){
   const name=prompt('새 태그 이름 (예: LOL, 웹소설)');
@@ -568,7 +632,22 @@ function renderScheduleModal(){
   const seg=(k,l)=>`<button class="${d.type===k?'on':''}" onclick="schedDraft.type='${k}';renderScheduleModal()">${l}</button>`;
   let extra='';
   if(d.type==='recurring'){
-    extra=`<div class="frow"><label>반복 요일</label><div class="daypick">${DAY_LABEL.map((l,i)=>`<button class="${d.days.includes(i)?'on':''}" onclick="toggleSchedDay(${i})">${l}</button>`).join('')}</div></div>
+    const rc=d.recur;
+    const fseg=(k,l)=>`<button class="${rc.freq===k?'on':''}" onclick="setSchedFreq('${k}')">${l}</button>`;
+    let recUI='';
+    if(rc.freq==='weekly'){
+      recUI=`<div class="frow-2">
+        <div class="frow"><label>반복 간격</label>${intervalSelect(rc,'setSchedInterval')}</div>
+      </div>
+      <div class="frow"><label>반복 요일</label><div class="daypick">${DAY_LABEL.map((l,i)=>`<button class="${rc.days.includes(i)?'on':''}" onclick="toggleSchedDay(${i})">${l}</button>`).join('')}</div></div>`;
+    } else if(rc.freq==='monthly'){
+      recUI=`<div class="frow"><label>매월 반복일 (복수 선택 가능)</label>${mdayGrid(rc.mdays||[],'toggleSchedMday')}</div>
+      <div style="font-size:10.5px;color:var(--sub);margin:-8px 0 14px">29·30·31일은 해당 일이 없는 달엔 건너뛰어요. 말일을 쓰면 매달 마지막 날에 떠요.</div>`;
+    } else {
+      recUI=`<div class="frow"><label>주기(일)</label><input type="number" min="1" value="${rc.interval||7}" onchange="schedDraft.recur.interval=Math.max(1,+this.value||1)"></div>`;
+    }
+    extra=`<div class="frow"><label>반복 방식</label><div class="seg">${fseg('weekly','주 단위')}${fseg('daily','일 단위')}${fseg('monthly','월 단위')}</div></div>
+    ${recUI}
     <div class="frow-2">
       <div class="frow"><label>반복 시작일</label><input type="date" value="${d.date}" onchange="schedDraft.date=this.value"></div>
       <div class="frow"><label>반복 종료일 (선택)</label><input type="date" value="${d.endDate||''}" onchange="schedDraft.endDate=this.value"></div>
@@ -597,13 +676,26 @@ function renderScheduleModal(){
   `);
 }
 function toggleSchedDay(i){
-  const a=schedDraft.days, x=a.indexOf(i); x>=0?a.splice(x,1):a.push(i); a.sort();
+  const a=schedDraft.recur.days, x=a.indexOf(i); x>=0?a.splice(x,1):a.push(i); a.sort();
+  renderScheduleModal();
+}
+function setSchedFreq(f){
+  const rc=schedDraft.recur; rc.freq=f;
+  if(f==='weekly'){ rc.days=rc.days||[]; rc.interval=Math.min(rc.interval||1,4); }
+  else if(f==='monthly'){ rc.mdays=rc.mdays||[]; }
+  else rc.interval=(rc.interval&&rc.interval>1)?rc.interval:7;
+  renderScheduleModal();
+}
+function setSchedInterval(n){ schedDraft.recur.interval=n; renderScheduleModal(); }
+function toggleSchedMday(m){
+  const a=schedDraft.recur.mdays, x=a.indexOf(m); x>=0?a.splice(x,1):a.push(m);
   renderScheduleModal();
 }
 function saveSchedule(){
   const d=schedDraft;
   if(!d.title.trim()) return alert('제목을 입력해주세요');
-  if(d.type==='recurring' && !d.days.length) return alert('반복 요일을 선택해주세요');
+  if(d.type==='recurring' && d.recur.freq==='weekly' && !d.recur.days.length) return alert('반복 요일을 선택해주세요');
+  if(d.type==='recurring' && d.recur.freq==='monthly' && !(d.recur.mdays||[]).length) return alert('반복일을 선택해주세요');
   if(d.endDate && d.endDate<d.date) return alert('종료일이 시작일보다 빨라요');
   if(d.id){ const i=state.schedules.findIndex(x=>x.id===d.id); state.schedules[i]=d; }
   else { d.id=uid(); state.schedules.push(d); }
@@ -617,11 +709,7 @@ function deleteSchedule(){
 
 /* ================= 루틴 ================= */
 const EMOJIS=['🌱','💧','🏃','💪','🧘','📚','✍️','🇯🇵','🎹','🧹','🛏️','💊','🍎','☕','🚶','🐱','🐶','🪴','🧴','💰','🎮','🎨','🦷','😴'];
-function goalText(r){
-  if(r.goalType==='fixed') return '매주 '+r.days.map(i=>DAY_LABEL[i]).join('·');
-  if(r.goalType==='perWeek') return '주 '+r.perWeek+'회';
-  return r.interval+'일마다';
-}
+function goalText(r){ return recurText(r.recur); }
 function toggleCheck(rid,ds){
   const r=state.routines.find(x=>x.id===rid);
   if(ds>todayStr()) return;
@@ -635,17 +723,12 @@ function rateFor(r,y,m){
   let start = monthStart > r.startDate ? monthStart : r.startDate;
   if(start>end) return {done:0,expected:0,pct:null};
   const nDays=diffDays(start,end)+1;
-  let done=0;
-  for(let ds=start; ds<=end; ds=addDays(ds,1)) if(r.checks[ds]) done++;
-  let expected=0;
-  if(r.goalType==='fixed'){
-    for(let ds=start; ds<=end; ds=addDays(ds,1)) if(r.days.includes(monIdx(parse(ds)))) expected++;
-  } else if(r.goalType==='perWeek'){
-    expected = Math.round(r.perWeek*nDays/7*10)/10;
-  } else {
-    expected = Math.floor((diffDays(r.startDate,end))/r.interval) - Math.max(0,Math.ceil((diffDays(r.startDate,start))/r.interval)) + 1;
-    if(expected<0) expected=0;
+  let done=0, expected=0;
+  for(let ds=start; ds<=end; ds=addDays(ds,1)){
+    if(r.checks[ds]) done++;
+    if(r.recur.freq!=='flex' && routineGoalOn(r,ds)) expected++;
   }
+  if(r.recur.freq==='flex') expected = Math.round(r.recur.perWeek*nDays/7*10)/10;
   const pct = expected>0 ? Math.min(100,Math.round(done/expected*100)) : (done>0?100:null);
   return {done,expected,pct};
 }
@@ -736,44 +819,81 @@ function openRoutineModal(id, unified){
   unifiedAdd=!!unified;
   const r=id?state.routines.find(x=>x.id===id):null;
   rtDraft=r?JSON.parse(JSON.stringify(r)):
-    {id:null,name:'',icon:'🌱',groupId:'',goalType:'fixed',days:[],perWeek:3,interval:7,startDate:todayStr(),checks:{}};
+    {id:null,name:'',icon:'🌱',groupId:'',recur:{freq:'weekly',interval:1,days:[]},startDate:todayStr(),checks:{}};
+  if(!rtDraft.recur) rtDraft.recur={freq:'weekly',interval:1,days:rtDraft.days||[]};
   renderRoutineModal();
 }
 function renderRoutineModal(){
-  const d=rtDraft;
-  const seg=(k,l)=>`<button class="${d.goalType===k?'on':''}" onclick="rtDraft.goalType='${k}';renderRoutineModal()">${l}</button>`;
+  const d=rtDraft, rc=d.recur;
+  const seg=(k,l)=>`<button class="${rc.freq===k?'on':''}" onclick="setRtFreq('${k}')">${l}</button>`;
   let goalUI='';
-  if(d.goalType==='fixed') goalUI=`<div class="frow"><label>목표 요일</label><div class="daypick">${DAY_LABEL.map((l,i)=>`<button class="${d.days.includes(i)?'on':''}" onclick="toggleRtDay(${i})">${l}</button>`).join('')}</div></div>`;
-  else if(d.goalType==='perWeek') goalUI=`<div class="frow"><label>주당 목표 횟수</label><input type="number" min="1" max="7" value="${d.perWeek}" onchange="rtDraft.perWeek=Math.max(1,Math.min(7,+this.value||1))"></div>`;
-  else goalUI=`<div class="frow"><label>주기 (며칠마다?)</label><input type="number" min="1" value="${d.interval}" onchange="rtDraft.interval=Math.max(1,+this.value||1)"></div>`;
+  if(rc.freq==='weekly'){
+    goalUI=`<div class="frow"><label>반복 간격</label>${intervalSelect(rc,'setRtInterval')}</div>
+    <div class="frow"><label>목표 요일</label><div class="daypick">${DAY_LABEL.map((l,i)=>`<button class="${rc.days.includes(i)?'on':''}" onclick="toggleRtDay(${i})">${l}</button>`).join('')}</div></div>`;
+  } else if(rc.freq==='daily'){
+    goalUI=`<div class="frow"><label>주기(일)</label><input type="number" min="1" value="${rc.interval||7}" onchange="rtDraft.recur.interval=Math.max(1,+this.value||1)"></div>`;
+  } else if(rc.freq==='monthly'){
+    goalUI=`<div class="frow"><label>매월 목표일 (복수 선택 가능)</label>${mdayGrid(rc.mdays||[],'toggleRtMday')}</div>`;
+  } else {
+    goalUI=`<div class="frow"><label>주당 목표 횟수</label><input type="number" min="1" max="7" value="${rc.perWeek||3}" onchange="rtDraft.recur.perWeek=Math.max(1,Math.min(7,+this.value||1))"></div>`;
+  }
   openSheet(d.id?'루틴 수정':(unifiedAdd?'새로 만들기':'루틴 추가'), `
     ${!d.id&&unifiedAdd?kindSeg('routine'):''}
     <div class="frow"><label>이름 *</label><input placeholder="예: 몬스테라 물주기, 일본어 단어" value="${esc(d.name)}" oninput="rtDraft.name=this.value"></div>
     <div class="frow"><label>아이콘</label><div class="emoji-grid">${EMOJIS.map(e=>`<button class="${d.icon===e?'on':''}" onclick="rtDraft.icon='${e}';renderRoutineModal()">${e}</button>`).join('')}</div></div>
     <div class="frow"><label>그룹 (선택)</label>
-      <select onchange="if(this.value==='__new'){addGroup()}else{rtDraft.groupId=this.value}">
+      <select onchange="if(this.value==='__new'){openGroupModal()}else{rtDraft.groupId=this.value}">
         <option value="">그룹 없음</option>
         ${state.groups.map(g=>`<option value="${g.id}" ${d.groupId===g.id?'selected':''}>${g.icon||'📁'} ${esc(g.name)}</option>`).join('')}
         <option value="__new">＋ 새 그룹 만들기…</option>
       </select></div>
-    <div class="frow"><label>목표 유형</label><div class="seg">${seg('fixed','요일 고정')}${seg('perWeek','주 N회')}${seg('interval','N일 주기')}</div></div>
+    <div class="frow"><label>반복 방식</label><div class="seg">${seg('weekly','주')}${seg('daily','일')}${seg('monthly','월')}${seg('flex','주 N회')}</div></div>
     ${goalUI}
     <div class="frow"><label>시작일</label><input type="date" value="${d.startDate}" onchange="rtDraft.startDate=this.value"></div>
     <button class="btn" onclick="saveRoutine()">저장</button>
     ${d.id?'<button class="btn del" onclick="deleteRoutine()">삭제</button>':''}
   `);
 }
-function toggleRtDay(i){ const a=rtDraft.days,x=a.indexOf(i); x>=0?a.splice(x,1):a.push(i); a.sort(); renderRoutineModal(); }
-function addGroup(){
-  const name=prompt('새 그룹 이름 (예: 식물)'); if(!name){renderRoutineModal();return;}
-  const icon=prompt('그룹 아이콘 (이모지 1개, 예: 🪴)')||'📁';
-  const g={id:uid(),name:name.trim(),icon:icon.trim()};
-  state.groups.push(g); rtDraft.groupId=g.id; save(); renderRoutineModal();
+function toggleRtDay(i){ const a=rtDraft.recur.days,x=a.indexOf(i); x>=0?a.splice(x,1):a.push(i); a.sort(); renderRoutineModal(); }
+function setRtFreq(f){
+  const rc=rtDraft.recur; rc.freq=f;
+  if(f==='weekly'){ rc.days=rc.days||[]; rc.interval=Math.min(rc.interval||1,4); }
+  else if(f==='daily'){ rc.interval=(rc.interval&&rc.interval>1)?rc.interval:7; }
+  else if(f==='monthly'){ rc.mdays=rc.mdays||[]; }
+  else { rc.perWeek=rc.perWeek||3; }
+  renderRoutineModal();
+}
+function setRtInterval(n){ rtDraft.recur.interval=n; renderRoutineModal(); }
+function toggleRtMday(m){
+  const a=rtDraft.recur.mdays, x=a.indexOf(m); x>=0?a.splice(x,1):a.push(m);
+  renderRoutineModal();
+}
+/* ----- 그룹 만들기 (전용 시트) ----- */
+let grpDraft=null;
+function openGroupModal(){
+  grpDraft={name:'',icon:'🪴'};
+  renderGroupModal();
+}
+function renderGroupModal(){
+  const d=grpDraft;
+  openSheet('새 그룹 만들기', `
+    <div class="frow"><label>그룹명 *</label><input placeholder="예: 식물, 운동, 공부" value="${esc(d.name)}" oninput="grpDraft.name=this.value"></div>
+    <div class="frow"><label>그룹 아이콘</label><div class="emoji-grid">${EMOJIS.map(e=>`<button class="${d.icon===e?'on':''}" onclick="grpDraft.icon='${e}';renderGroupModal()">${e}</button>`).join('')}</div></div>
+    <button class="btn" onclick="saveGroup()">그룹 만들기</button>
+    <button class="btn ghost" onclick="renderRoutineModal()">취소 (루틴으로 돌아가기)</button>
+  `);
+}
+function saveGroup(){
+  if(!grpDraft.name.trim()) return alert('그룹명을 입력해주세요');
+  const g={id:uid(),name:grpDraft.name.trim(),icon:grpDraft.icon};
+  state.groups.push(g); rtDraft.groupId=g.id; save();
+  renderRoutineModal();
 }
 function saveRoutine(){
   const d=rtDraft;
   if(!d.name.trim()) return alert('이름을 입력해주세요');
-  if(d.goalType==='fixed'&&!d.days.length) return alert('목표 요일을 선택해주세요');
+  if(d.recur.freq==='weekly'&&!d.recur.days.length) return alert('목표 요일을 선택해주세요');
+  if(d.recur.freq==='monthly'&&!(d.recur.mdays||[]).length) return alert('목표일을 선택해주세요');
   if(d.id){ const i=state.routines.findIndex(x=>x.id===d.id); state.routines[i]=d; }
   else { d.id=uid(); state.routines.push(d); }
   save(); closeSheet();
@@ -786,19 +906,21 @@ function deleteRoutine(){
 }
 
 /* ================= 후기 ================= */
+const MEDIA_EMOJIS=['🎬','🎭','🎤','🎧','📖','📚','🖼️','🎨','🎮','📺','🎫','🎪','💿','🎹','🏛️','✨'];
+function catLabel(c){ const ic=state.catIcons&&state.catIcons[c]; return (ic?ic+' ':'')+esc(c); }
 function renderReviews(){
   const chips=document.getElementById('rv-cat-chips');
   chips.innerHTML=`<button class="cchip ${!rvCatFilter?'on':''}" onclick="rvCatFilter=null;renderReviews()">전체</button>`+
-    state.categories.map(c=>`<button class="cchip ${rvCatFilter===c?'on':''}" onclick="rvCatFilter='${esc(c)}';renderReviews()">${esc(c)}</button>`).join('');
+    state.categories.map(c=>`<button class="cchip ${rvCatFilter===c?'on':''}" onclick="rvCatFilter='${esc(c)}';renderReviews()">${catLabel(c)}</button>`).join('');
   const list=document.getElementById('review-list');
   let arr=state.reviews.filter(r=>!rvCatFilter||r.category===rvCatFilter);
   arr.sort((a,b)=>b.date.localeCompare(a.date));
   if(!arr.length){ list.innerHTML='<div class="empty">아직 후기가 없어요.<br>본 공연·영화를 기록해보세요!</div>'; return; }
   list.innerHTML=arr.map(r=>`<div class="rv-card" onclick="openReviewModal('${r.id}')">
-    ${r.img?`<img class="rv-thumb" src="${esc(r.img)}" onerror="this.style.display='none'">`:''}
+    ${r.img?`<img class="rv-thumb" src="${esc(r.img)}" referrerpolicy="no-referrer" onerror="this.style.display='none'">`:''}
     <div class="rv-body">
-      <div style="display:flex;gap:8px;align-items:center"><span class="rv-cat">${esc(r.category)}</span><span class="rv-title">${esc(r.title)}</span></div>
-      <div class="rv-date">${r.date}${r.endDate&&r.endDate!==r.date?' ~ '+r.endDate:''}${r.fromScheduleId?' · 스케줄 연동':''}</div>
+      <div style="display:flex;gap:8px;align-items:center"><span class="rv-cat">${catLabel(r.category)}</span>${r.round>1?`<span class="rv-cat" style="color:var(--sub)">${r.round}차</span>`:''}<span class="rv-title">${esc(r.title)}</span></div>
+      <div class="rv-date">${r.date}${r.endDate&&r.endDate!==r.date?' ~ '+r.endDate:''}${r.place?' · '+esc(r.place)+(r.ott?' ('+esc(r.ott)+')':'')+(r.seat?' '+esc(r.seat):''):''}${r.fromScheduleId?' · 스케줄 연동':''}</div>
       ${r.rating?`<div class="rv-stars">${starStr(r.rating)} <span style="color:var(--sub);font-size:11px;letter-spacing:0">${r.rating.toFixed(1)}</span></div>`:''}
       ${r.text?`<div class="rv-text">${esc(r.text)}</div>`:''}
     </div></div>`).join('');
@@ -808,8 +930,44 @@ function openReviewModal(id, preset, unified){
   unifiedAdd=!!unified;
   const r=id?state.reviews.find(x=>x.id===id):null;
   rvDraft=r?JSON.parse(JSON.stringify(r)):
-    Object.assign({id:null,title:'',category:state.categories[0],date:todayStr(),endDate:'',rating:0,text:'',img:'',fromScheduleId:''}, preset||{});
+    Object.assign({id:null,title:'',category:state.categories[0],date:todayStr(),endDate:'',rating:0,text:'',img:'',place:'',seat:'',ott:'',round:1,fromScheduleId:''}, preset||{});
+  if(!rvDraft.round) rvDraft.round=1;
   renderReviewModal();
+}
+function addNthView(){
+  const src=rvDraft;
+  rvDraft={id:null,title:src.title,category:src.category,date:todayStr(),endDate:'',rating:0,text:'',img:src.img,place:'',seat:'',ott:'',round:(src.round||1)+1,fromScheduleId:''};
+  renderReviewModal();
+}
+const MOVIE_PLACES=['CGV','롯데시네마','메가박스','OTT','기타'];
+const OTT_LIST=['넷플릭스','디즈니+','티빙','웨이브','쿠팡플레이','왓챠','라프텔','기타'];
+function setRvPlace(v){
+  rvDraft.place=v;
+  if(v!=='OTT') rvDraft.ott='';
+  if(!['CGV','롯데시네마','메가박스'].includes(v)) rvDraft.seat='';
+  renderReviewModal();
+}
+function placeUI(d){
+  if(d.category==='영화'){
+    const theater=['CGV','롯데시네마','메가박스'].includes(d.place);
+    let sub='';
+    if(theater) sub=`<div class="frow"><label>좌석 (선택)</label><input placeholder="예: H열 12번, 리클라이너 A3" value="${esc(d.seat||'')}" oninput="rvDraft.seat=this.value"></div>`;
+    else if(d.place==='OTT') sub=`<div class="frow"><label>어떤 OTT? (선택)</label><select onchange="rvDraft.ott=this.value">
+      <option value="">선택 안 함</option>
+      ${OTT_LIST.map(o=>`<option value="${o}" ${d.ott===o?'selected':''}>${o}</option>`).join('')}</select></div>`;
+    return `<div class="frow"><label>본 곳 (선택)</label><select onchange="setRvPlace(this.value)">
+      <option value="">선택 안 함</option>
+      ${MOVIE_PLACES.map(p=>`<option value="${p}" ${d.place===p?'selected':''}>${p}</option>`).join('')}</select></div>${sub}`;
+  }
+  if(d.category==='애니메이션'){
+    return `<div class="frow"><label>본 곳 (OTT, 선택)</label><select onchange="rvDraft.place=this.value">
+      <option value="">선택 안 함</option>
+      ${OTT_LIST.map(o=>`<option value="${o}" ${d.place===o?'selected':''}>${o}</option>`).join('')}</select></div>`;
+  }
+  return `<div class="frow-2">
+    <div class="frow"><label>장소 (선택)</label><input placeholder="예: 샤롯데씨어터" value="${esc(d.place||'')}" oninput="rvDraft.place=this.value"></div>
+    <div class="frow"><label>좌석 (선택)</label><input placeholder="예: 1층 B열 7번" value="${esc(d.seat||'')}" oninput="rvDraft.seat=this.value"></div>
+  </div>`;
 }
 function searchPoster(){
   if(!rvDraft.title.trim()) return alert('제목을 먼저 입력하면 검색이 정확해져요');
@@ -818,6 +976,18 @@ function searchPoster(){
   a.href='https://www.google.com/search?udm=2&q='+q;
   a.target='_blank'; a.rel='noopener';
   document.body.appendChild(a); a.click(); a.remove();
+}
+function normalizeImgUrl(u){
+  u=(u||'').trim();
+  try{
+    if(/google\.[^/]+\/imgres/.test(u)){
+      const p=new URL(u).searchParams.get('imgurl'); if(p) return decodeURIComponent(p);
+    }
+    if(/google\.[^/]+\/url/.test(u)){
+      const p=new URL(u).searchParams.get('url'); if(p) return p;
+    }
+  }catch(e){}
+  return u;
 }
 function pickReviewImage(input){
   const f=input.files[0]; if(!f) return;
@@ -870,8 +1040,8 @@ function renderReviewModal(){
   openSheet(d.id?'후기 수정':(unifiedAdd?'새로 만들기':'후기 남기기'), `
     ${!d.id&&unifiedAdd?kindSeg('review'):''}
     <div class="frow"><label>카테고리</label>
-      <select onchange="if(this.value==='__new'){addCategory()}else{rvDraft.category=this.value}">
-        ${state.categories.map(c=>`<option ${d.category===c?'selected':''}>${esc(c)}</option>`).join('')}
+      <select onchange="if(this.value==='__new'){openCatModal('review')}else{rvDraft.category=this.value;rvDraft.place='';rvDraft.seat='';rvDraft.ott='';renderReviewModal()}">
+        ${state.categories.map(c=>`<option value="${esc(c)}" ${d.category===c?'selected':''}>${catLabel(c)}</option>`).join('')}
         <option value="__new">＋ 카테고리 추가…</option>
       </select></div>
     <div class="frow"><label>제목 *</label><input placeholder="예: 데스노트, 듄 파트3" value="${esc(d.title)}" oninput="rvDraft.title=this.value"></div>
@@ -880,25 +1050,27 @@ function renderReviewModal(){
       <div class="frow"><label>시작일 *</label><input type="date" value="${d.date}" onchange="rvDraft.date=this.value"></div>
       <div class="frow"><label>종료일 (선택)</label><input type="date" value="${d.endDate||''}" onchange="rvDraft.endDate=this.value"></div>
     </div>
+    <div class="frow"><label>관람 회차</label><input type="number" min="1" value="${d.round||1}" onchange="rvDraft.round=Math.max(1,+this.value||1)"> </div>
+    ${placeUI(d)}
     <div class="frow"><label>포스터 이미지 (선택)</label>
       <div style="display:flex;gap:12px;align-items:flex-start">
-        <div class="poster">${d.img?`<img src="${esc(d.img)}" onerror="this.parentNode.textContent='!'">`:'＋'}</div>
+        <div class="poster">${d.img?`<img src="${esc(d.img)}" referrerpolicy="no-referrer" onerror="this.parentNode.textContent='표시불가'">`:'＋'}</div>
         <div style="flex:1">
           <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
             <button class="mini-act" onclick="searchPoster()">웹에서 검색</button>
             <button class="mini-act" onclick="document.getElementById('rv-img-file').click()">갤러리</button>
             ${d.img?`<button class="mini-act" style="color:var(--danger);background:#2E2222" onclick="rvDraft.img='';renderReviewModal()">삭제</button>`:''}
           </div>
-          <input placeholder="또는 이미지 주소(URL) 붙여넣기" value="${d.img&&!d.img.startsWith('data:')?esc(d.img):''}" onchange="rvDraft.img=this.value.trim();renderReviewModal()">
+          <input placeholder="또는 이미지 주소(URL) 붙여넣기" value="${d.img&&!d.img.startsWith('data:')?esc(d.img):''}" onchange="rvDraft.img=normalizeImgUrl(this.value);renderReviewModal()">
           <input type="file" id="rv-img-file" accept="image/*" class="hidden" onchange="pickReviewImage(this)">
-          <div style="font-size:10.5px;color:var(--sub);margin-top:6px;line-height:1.5">웹 검색 → 마음에 드는 이미지 길게 눌러 <b>이미지 주소 복사</b> 후 붙여넣거나, 저장해서 갤러리로 올려도 돼요.</div>
+          <div style="font-size:10.5px;color:var(--sub);margin-top:6px;line-height:1.5">URL 이미지가 '표시불가'로 뜨면 그 사이트가 외부 표시를 막는 거예요. 이미지를 <b>길게 눌러 저장 → 갤러리 버튼으로 업로드</b>하면 확실해요 (앱 안에 저장되어 링크가 안 깨져요).</div>
         </div>
       </div>
     </div>
     <div class="frow"><label>별점 (선택) — 별 왼쪽/오른쪽 탭으로 반개 조절</label><div class="stars-input">${stars}</div></div>
     <div class="frow"><label>리뷰 (선택)</label><textarea rows="4" placeholder="감상을 남겨보세요" oninput="rvDraft.text=this.value">${esc(d.text)}</textarea></div>
     <button class="btn" onclick="saveReview()">저장</button>
-    ${d.id?'<button class="btn del" onclick="deleteReview()">삭제</button>':''}
+    ${d.id?`<button class="btn ghost" onclick="addNthView()">＋ ${(d.round||1)+1}차 관람 추가</button><button class="btn del" onclick="deleteReview()">삭제</button>`:''}
   `);
 }
 function setRating(ev,i){
@@ -908,10 +1080,33 @@ function setRating(ev,i){
   rvDraft.rating = (rvDraft.rating===val) ? 0 : val;
   renderReviewModal();
 }
-function addCategory(){
-  const name=prompt('새 카테고리 이름');
-  if(name&&name.trim()&&!state.categories.includes(name.trim())){ state.categories.push(name.trim()); rvDraft.category=name.trim(); save(); }
-  renderReviewModal();
+/* ----- 카테고리 추가 (전용 시트) ----- */
+let catDraft=null, catReturn=null;
+function openCatModal(from){
+  catDraft={name:'',icon:''}; catReturn=from;
+  renderCatModal();
+}
+function renderCatModal(){
+  const d=catDraft;
+  openSheet('카테고리 추가', `
+    <div class="frow"><label>카테고리명 *</label><input placeholder="예: 뮤지컬, 드라마" value="${esc(d.name)}" oninput="catDraft.name=this.value"></div>
+    <div class="frow"><label>아이콘 (선택)</label><div class="emoji-grid">
+      <button class="${!d.icon?'on':''}" style="font-size:12px" onclick="catDraft.icon='';renderCatModal()">없음</button>
+      ${MEDIA_EMOJIS.map(e=>`<button class="${d.icon===e?'on':''}" onclick="catDraft.icon='${e}';renderCatModal()">${e}</button>`).join('')}
+    </div></div>
+    <button class="btn" onclick="saveCat()">추가</button>
+    <button class="btn ghost" onclick="${catReturn==='review'?'renderReviewModal()':'closeSheet()'}">취소</button>
+  `);
+}
+function saveCat(){
+  const name=catDraft.name.trim();
+  if(!name) return alert('카테고리명을 입력해주세요');
+  if(state.categories.includes(name)) return alert('이미 있는 카테고리예요');
+  state.categories.push(name);
+  if(catDraft.icon) state.catIcons[name]=catDraft.icon;
+  save();
+  if(catReturn==='review'){ rvDraft.category=name; renderReviewModal(); }
+  else closeSheet();
 }
 function saveReview(){
   const d=rvDraft;
@@ -930,15 +1125,9 @@ function deleteReview(){
 /* ================= 웹소설 ================= */
 const WORK_STATUS={prep:'준비중',ongoing:'연재중',done:'완결'};
 function nf(n){ return (n||0).toLocaleString('ko-KR'); }
-function uploadTypeOf(w){ return w.uploadType || (w.uploadDays&&w.uploadDays.length?'days':'free'); }
-function uploadDesc(w){
-  const t=uploadTypeOf(w);
-  if(t==='days'&&w.uploadDays.length) return w.uploadDays.map(i=>DAY_LABEL[i]).join('·');
-  if(t==='perWeek') return '주 '+(w.uploadPerWeek||3)+'회';
-  return '자유 연재';
-}
+const LOG_KINDS={write:'집필',synop:'시놉시스',edit:'교정',etc:'기타'};
 function novelChecks(){
-  const c={}; state.worklogs.forEach(l=>{ if(l.chars>0) c[l.date]=true; }); return c;
+  const c={}; state.worklogs.forEach(l=>{ c[l.date]=true; }); return c;
 }
 function novelMonthStats(y,m){
   const ms=fmt(new Date(y,m,1)), me=fmt(new Date(y,m+1,0));
@@ -947,7 +1136,7 @@ function novelMonthStats(y,m){
   return {total, byWork, workDays:days.size};
 }
 function novelPace(y,m){
-  const vr={goalType:'perWeek',perWeek:state.novelGoal.perWeek,startDate:'2000-01-01',checks:novelChecks()};
+  const vr={recur:{freq:'flex',perWeek:state.novelGoal.perWeek},startDate:'2000-01-01',checks:novelChecks()};
   return rateFor(vr,y,m);
 }
 function renderNovel(){
@@ -980,7 +1169,6 @@ function renderNovel(){
         <span class="status-badge st-${w.status}">${WORK_STATUS[w.status]}</span>
       </div>
       <div class="wk-meta">
-        연재 ${uploadDesc(w)}<br>
         예약 ${last?`<b>${last.ep}화</b>까지 (${last.date})`:'없음'}
         ${nextPub?`<br>출간 <b>${nextPub.date}</b> ${esc(nextPub.label||'')}`:''}
         ${chars?`<br>이번달 <b>${nf(chars)}자</b>`:''}
@@ -995,9 +1183,10 @@ function renderNovel(){
   const logs=state.worklogs.filter(l=>l.date>=ms&&l.date<=me).sort((a,b)=>b.date.localeCompare(a.date));
   document.getElementById('novel-logs').innerHTML = logs.length ? logs.map(l=>{
     const w=state.works.find(x=>x.id===l.workId);
+    const kind=l.kind||'write';
     return `<div class="log-row"><span style="color:var(--sub)">${l.date.slice(5).replace('-','/')}</span>
-      <span style="flex:1;margin:0 12px">${w?esc(w.title):'삭제된 작품'}</span>
-      <b>${nf(l.chars)}자</b>
+      <span style="flex:1;margin:0 12px">${w?esc(w.title):'삭제된 작품'}${kind!=='write'?` <span style="font-size:10.5px;color:var(--accent)">[${LOG_KINDS[kind]}]</span>`:''}</span>
+      <b>${l.chars?nf(l.chars)+'자':LOG_KINDS[kind]}</b>
       <button style="color:var(--sub);margin-left:10px;font-size:12px" onclick="editLog('${l.id}')">수정</button></div>`;
   }).join('') : '<div class="empty" style="padding:12px 0">이번달 기록이 없어요</div>';
 }
@@ -1011,25 +1200,17 @@ function openWorkModal(id){
 function renderWorkModal(){
   const d=workDraft;
   const seg=(k,l)=>`<button class="${d.status===k?'on':''}" onclick="workDraft.status='${k}';renderWorkModal()">${l}</button>`;
-  const useg=(k,l)=>`<button class="${d.uploadType===k?'on':''}" onclick="workDraft.uploadType='${k}';renderWorkModal()">${l}</button>`;
-  let uploadUI='';
-  if(d.uploadType==='days') uploadUI=`<div class="frow"><label>연재 요일</label><div class="daypick">${DAY_LABEL.map((l,i)=>`<button class="${d.uploadDays.includes(i)?'on':''}" onclick="toggleWorkDay(${i})">${l}</button>`).join('')}</div></div>`;
-  else if(d.uploadType==='perWeek') uploadUI=`<div class="frow"><label>주당 업로드 횟수</label><input type="number" min="1" max="7" value="${d.uploadPerWeek}" onchange="workDraft.uploadPerWeek=Math.max(1,Math.min(7,+this.value||1))"></div>`;
   openSheet(d.id?'작품 수정':'새 작품', `
     <div class="frow"><label>제목 *</label><input value="${esc(d.title)}" placeholder="작품 제목" oninput="workDraft.title=this.value"></div>
     <div class="frow"><label>상태</label><div class="seg">${seg('prep','준비중')}${seg('ongoing','연재중')}${seg('done','완결')}</div></div>
-    <div class="frow"><label>연재 방식 (예약 자동 배정에 사용)</label><div class="seg">${useg('days','요일 고정')}${useg('perWeek','주 N회')}${useg('free','자유')}</div></div>
-    ${uploadUI}
     <div class="frow"><label>메모 (설정·플롯 등)</label><textarea rows="5" placeholder="작품 관련 내용을 자유롭게 정리하세요" oninput="workDraft.memo=this.value">${esc(d.memo)}</textarea></div>
     <button class="btn" onclick="saveWork()">저장</button>
     ${d.id?'<button class="btn del" onclick="deleteWork()">삭제</button>':''}
   `);
 }
-function toggleWorkDay(i){ const a=workDraft.uploadDays,x=a.indexOf(i); x>=0?a.splice(x,1):a.push(i); a.sort(); renderWorkModal(); }
 function saveWork(){
   const d=workDraft;
   if(!d.title.trim()) return alert('제목을 입력해주세요');
-  if(d.uploadType==='days'&&!d.uploadDays.length) return alert('연재 요일을 선택하거나 다른 연재 방식을 골라주세요');
   if(d.id){ const i=state.works.findIndex(x=>x.id===d.id); state.works[i]=d; }
   else { d.id=uid(); state.works.push(d); }
   save(); closeSheet();
@@ -1049,7 +1230,6 @@ function openWorkDetail(id){
   openSheet(esc(w.title), `
     <div style="display:flex;gap:8px;margin-bottom:16px">
       <span class="status-badge st-${w.status}">${WORK_STATUS[w.status]}</span>
-      <span class="status-badge st-prep">연재 ${uploadDesc(w)}</span>
       <button class="mini-act" style="margin-left:auto" onclick="openWorkModal('${w.id}')">작품 수정</button>
     </div>
     ${w.memo?`<div class="card" style="font-size:13px;color:#C4CDC7;white-space:pre-wrap;line-height:1.6">${esc(w.memo)}</div>`:''}
@@ -1067,65 +1247,62 @@ function openWorkDetail(id){
       <button style="color:var(--sub);font-size:12px" onclick="closeSheet();openScheduleModal('${s.id}')">수정</button></div>`).join(''):'<div class="empty" style="padding:10px 0">교정 일정 없음</div>'}</div>
   `);
 }
-/* ----- 회차 예약 ----- */
+/* ----- 회차 예약 (기간 + 주기) ----- */
 let epDraft=null;
-function nextUploadDate(w, after){
-  const t=uploadTypeOf(w);
-  if(t==='days'&&w.uploadDays.length){
-    let d=addDays(after,1);
-    for(let i=0;i<14;i++){ if(w.uploadDays.includes(monIdx(parse(d)))) return d; d=addDays(d,1); }
-    return d;
-  }
-  if(t==='perWeek') return addDays(after, Math.max(1,Math.round(7/(w.uploadPerWeek||3))));
-  return addDays(after,1);
-}
-function buildEps(w,d){
-  const t=uploadTypeOf(w), out=[];
-  if(t==='days'&&w.uploadDays.length){
-    let date=d.startDate;
-    for(let i=0;i<200&&out.length<d.count;i++){
-      if(w.uploadDays.includes(monIdx(parse(date)))) out.push({ep:d.startEp+out.length,date});
-      date=addDays(date,1);
-    }
-  } else if(t==='perWeek'){
-    const n=w.uploadPerWeek||3;
-    for(let i=0;i<d.count;i++) out.push({ep:d.startEp+i,date:addDays(d.startDate,Math.round(i*7/n))});
-  } else {
-    for(let i=0;i<d.count;i++) out.push({ep:d.startEp+i,date:addDays(d.startDate,i)});
-  }
-  return out;
-}
 function openEpModal(wid){
   const w=state.works.find(x=>x.id===wid);
   const last=w.episodes.length?w.episodes.reduce((a,b)=>a.ep>b.ep?a:b):null;
-  epDraft={wid, startEp:last?last.ep+1:1, startDate:last?nextUploadDate(w,last.date):todayStr(), count:1, dates:null};
+  const start=last?addDays(last.date,1):todayStr();
+  epDraft={wid, startEp:last?last.ep+1:1, startDate:start, endDate:addDays(start,13), mode:'daily', n:1, days:[], dates:[]};
   rebuildEpDates();
   renderEpModal();
 }
 function rebuildEpDates(){
-  const w=state.works.find(x=>x.id===epDraft.wid);
-  epDraft.dates=buildEps(w,epDraft).map(e=>e.date);
+  const d=epDraft, out=[];
+  if(d.endDate && d.endDate>=d.startDate){
+    for(let ds=d.startDate; ds<=d.endDate && out.length<60; ds=addDays(ds,1)){
+      if(d.mode==='daily'){ if(diffDays(d.startDate,ds)%Math.max(1,d.n)===0) out.push(ds); }
+      else { if(d.days.includes(monIdx(parse(ds)))) out.push(ds); }
+    }
+  }
+  d.dates=out;
 }
-function setEpParam(k,v){
-  epDraft[k]=v; rebuildEpDates(); renderEpModal();
+function setEpParam(k,v){ epDraft[k]=v; rebuildEpDates(); renderEpModal(); }
+function toggleEpDay(i){
+  const a=epDraft.days, x=a.indexOf(i); x>=0?a.splice(x,1):a.push(i); a.sort();
+  rebuildEpDates(); renderEpModal();
 }
 function renderEpModal(){
   const d=epDraft, w=state.works.find(x=>x.id===d.wid);
+  const mseg=(k,l)=>`<button class="${d.mode===k?'on':''}" onclick="setEpParam('mode','${k}')">${l}</button>`;
+  const nHint = d.n===1?'매일':d.n===2?'격일':d.n+'일에 1번';
+  let cadUI='';
+  if(d.mode==='daily'){
+    cadUI=`<div class="frow"><label>주기 — 현재: <b style="color:var(--accent)">${nHint}</b></label>
+      <div class="seg">${[1,2,3].map(n=>`<button class="${d.n===n?'on':''}" onclick="setEpParam('n',${n})">${n===1?'매일':n===2?'격일':'3일에 1번'}</button>`).join('')}</div>
+      <input type="number" min="1" max="30" value="${d.n}" style="margin-top:8px" onchange="setEpParam('n',Math.max(1,Math.min(30,+this.value||1)))" placeholder="직접 입력(일)"></div>`;
+  } else {
+    cadUI=`<div class="frow"><label>업로드 요일</label><div class="daypick">${DAY_LABEL.map((l,i)=>`<button class="${d.days.includes(i)?'on':''}" onclick="toggleEpDay(${i})">${l}</button>`).join('')}</div></div>`;
+  }
   openSheet('회차 예약 · '+esc(w.title), `
+    <div class="frow"><label>시작 회차</label><input type="number" min="1" value="${d.startEp}" onchange="setEpParam('startEp',Math.max(1,+this.value||1))"></div>
     <div class="frow-2">
-      <div class="frow"><label>시작 회차</label><input type="number" min="1" value="${d.startEp}" onchange="setEpParam('startEp',Math.max(1,+this.value||1))"></div>
-      <div class="frow"><label>회차 수</label><input type="number" min="1" max="60" value="${d.count}" onchange="setEpParam('count',Math.max(1,Math.min(60,+this.value||1)))"></div>
+      <div class="frow"><label>기간 시작</label><input type="date" value="${d.startDate}" onchange="setEpParam('startDate',this.value)"></div>
+      <div class="frow"><label>기간 종료</label><input type="date" value="${d.endDate}" onchange="setEpParam('endDate',this.value)"></div>
     </div>
-    <div class="frow"><label>시작 날짜</label><input type="date" value="${d.startDate}" onchange="setEpParam('startDate',this.value)"></div>
-    <div class="frow"><label>배정 (${uploadDesc(w)} 기준 자동 제안 · 날짜 개별 수정 가능)</label>
-      <div class="card" style="margin:0">${d.dates.map((dt,i)=>`<div class="log-row"><b style="min-width:44px">${d.startEp+i}화</b>
+    <div class="frow"><label>등록 방식</label><div class="seg">${mseg('daily','N일마다')}${mseg('days','요일 선택')}</div></div>
+    ${cadUI}
+    <div class="frow"><label>배정 미리보기 — 총 ${d.dates.length}화 (날짜 개별 수정 가능)</label>
+      <div class="card" style="margin:0">${d.dates.length?d.dates.map((dt,i)=>`<div class="log-row"><b style="min-width:44px">${d.startEp+i}화</b>
         <input type="date" value="${dt}" style="flex:1;margin-left:10px;padding:8px 10px" onchange="epDraft.dates[${i}]=this.value">
-      </div>`).join('')}</div></div>
+      </div>`).join(''):'<div class="empty" style="padding:10px 0">기간과 주기를 선택하면 여기 표시돼요</div>'}</div></div>
     <button class="btn" onclick="saveEps()">예약 등록</button>
   `);
 }
 function saveEps(){
   const d=epDraft, w=state.works.find(x=>x.id===d.wid);
+  if(!d.dates.length) return alert('기간과 주기를 확인해주세요 (등록될 회차가 없어요)');
+  if(d.mode==='days'&&!d.days.length) return alert('업로드 요일을 선택해주세요');
   if(d.dates.some(x=>!x)) return alert('날짜가 비어있는 회차가 있어요');
   const eps=d.dates.map((date,i)=>({ep:d.startEp+i,date}));
   const dup=eps.some(e=>w.episodes.some(x=>x.ep===e.ep));
@@ -1162,7 +1339,7 @@ function addProof(wid){
 let logDraft=null;
 function openLogModal(wid){
   if(!state.works.length){ alert('먼저 작품을 등록해주세요'); openWorkModal(); return; }
-  logDraft={id:null, date:todayStr(), workId:wid||state.works[0].id, chars:''};
+  logDraft={id:null, date:todayStr(), workId:wid||state.works[0].id, chars:'', kind:'write'};
   renderLogModal();
 }
 function editLog(id){
@@ -1172,23 +1349,27 @@ function editLog(id){
 }
 function renderLogModal(){
   const d=logDraft;
+  const kseg=(k)=>`<button class="${(d.kind||'write')===k?'on':''}" onclick="logDraft.kind='${k}';renderLogModal()">${LOG_KINDS[k]}</button>`;
+  const isWrite=(d.kind||'write')==='write';
   openSheet(d.id?'작업 기록 수정':'작업 기록', `
     <div class="frow"><label>날짜</label><input type="date" value="${d.date}" max="${todayStr()}" onchange="logDraft.date=this.value"></div>
     <div class="frow"><label>작품</label><select onchange="logDraft.workId=this.value">
       ${state.works.map(w=>`<option value="${w.id}" ${d.workId===w.id?'selected':''}>${esc(w.title)}</option>`).join('')}</select></div>
-    <div class="frow"><label>글자수 *</label><input type="number" min="0" inputmode="numeric" placeholder="예: 5000" value="${d.chars}" oninput="logDraft.chars=this.value"></div>
+    <div class="frow"><label>작업 유형</label><div class="seg">${kseg('write')}${kseg('synop')}${kseg('edit')}${kseg('etc')}</div></div>
+    <div class="frow"><label>글자수 ${isWrite?'*':'(선택)'}</label><input type="number" min="0" inputmode="numeric" placeholder="${isWrite?'예: 5000':'없으면 비워두세요'}" value="${d.chars}" oninput="logDraft.chars=this.value"></div>
     <button class="btn" onclick="saveLog()">저장</button>
     ${d.id?'<button class="btn del" onclick="deleteLog()">삭제</button>':''}
   `);
 }
 function saveLog(){
-  const d=logDraft, chars=parseInt(d.chars,10);
-  if(isNaN(chars)||chars<0) return alert('글자수를 입력해주세요');
+  const d=logDraft, kind=d.kind||'write';
+  let chars=parseInt(d.chars,10); if(isNaN(chars)||chars<0) chars=0;
+  if(kind==='write'&&chars<=0) return alert('집필 기록은 글자수를 입력해주세요');
   if(d.date>todayStr()) return alert('미래 날짜는 기록할 수 없어요');
-  if(d.id){ const i=state.worklogs.findIndex(x=>x.id===d.id); state.worklogs[i]={...d,chars}; }
+  if(d.id){ const i=state.worklogs.findIndex(x=>x.id===d.id); state.worklogs[i]={...d,chars,kind}; }
   else {
-    const ex=state.worklogs.find(l=>l.date===d.date&&l.workId===d.workId);
-    if(ex){ ex.chars+=chars; } else state.worklogs.push({id:uid(),date:d.date,workId:d.workId,chars});
+    const ex=state.worklogs.find(l=>l.date===d.date&&l.workId===d.workId&&(l.kind||'write')===kind&&kind==='write');
+    if(ex){ ex.chars+=chars; } else state.worklogs.push({id:uid(),date:d.date,workId:d.workId,chars,kind});
   }
   save(); closeSheet();
 }
@@ -1208,10 +1389,27 @@ function openGoalModal(){
 
 /* ================= 설정 ================= */
 function renderSettings(){
+  const sy=document.getElementById('sync-card');
+  if(sy){
+    if(syncStatus.connected){
+      sy.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between">
+        <div><b style="color:var(--accent)">● 연결됨</b><div class="desc" style="font-size:11.5px;color:var(--sub);margin-top:3px">${syncStatus.busy?'동기화 중…':syncLabel()}</div></div>
+        <div style="display:flex;gap:6px">
+          <button class="mini-act" onclick="syncNow()">지금 동기화</button>
+          <button class="mini-act" style="color:var(--danger);background:#2E2222" onclick="disconnectDrive()">해제</button>
+        </div></div>`;
+    } else {
+      sy.innerHTML=`<div style="font-size:12.5px;color:var(--sub);line-height:1.6;margin-bottom:12px">구글 계정을 연결하면 데이터가 드라이브에 자동 저장되고, 구글 캘린더 일정도 캘린더 뷰에 표시할 수 있어요.</div>
+        <button class="btn" style="margin-top:0" onclick="connectDrive()">구글 계정 연결</button>`;
+    }
+  }
   const el=document.getElementById('cat-manage');
-  el.innerHTML=state.categories.map(c=>`<div class="settings-row"><span>${esc(c)}</span>
-    <button style="color:var(--danger);font-size:13px" onclick="removeCategory('${esc(c)}')">삭제</button></div>`).join('')+
-    `<div class="settings-row" onclick="addCategoryFromSettings()" style="color:var(--accent);font-weight:600">＋ 카테고리 추가</div>`;
+  el.innerHTML=state.categories.map(c=>`<div class="settings-row"><span>${catLabel(c)}</span>
+    <span style="display:flex;gap:12px">
+      <button style="color:var(--accent);font-size:13px" onclick="editCatIcon('${esc(c)}')">아이콘</button>
+      <button style="color:var(--danger);font-size:13px" onclick="removeCategory('${esc(c)}')">삭제</button>
+    </span></div>`).join('')+
+    `<div class="settings-row" onclick="openCatModal('settings')" style="color:var(--accent);font-weight:600">＋ 카테고리 추가</div>`;
   const tg=document.getElementById('tag-manage');
   tg.innerHTML=state.schedTags.map(t=>`<div class="settings-row"><span>#${esc(t)}</span>
     <button style="color:var(--danger);font-size:13px" onclick="removeSchedTag('${esc(t)}')">삭제</button></div>`).join('')+
@@ -1233,9 +1431,12 @@ function removeCategory(c){
   if(!confirm(`'${c}' 카테고리를 삭제할까요?`)) return;
   state.categories=state.categories.filter(x=>x!==c); save(); renderSettings();
 }
-function addCategoryFromSettings(){
-  const name=prompt('새 카테고리 이름');
-  if(name&&name.trim()&&!state.categories.includes(name.trim())){ state.categories.push(name.trim()); save(); renderSettings(); }
+function editCatIcon(c){
+  const cur=state.catIcons[c]||'';
+  const ic=prompt('아이콘 이모지 1개 (비우면 아이콘 제거)', cur);
+  if(ic===null) return;
+  if(ic.trim()) state.catIcons[c]=ic.trim(); else delete state.catIcons[c];
+  save(); renderSettings();
 }
 function exportData(){
   const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
@@ -1276,7 +1477,7 @@ function importICS(input){
           const by=(rrule.match(/BYDAY=([A-Z,]+)/)||[])[1];
           const days=by?by.split(',').map(d=>ICS_DAY[d]).filter(d=>d!==undefined):[monIdx(parse(date))];
           const until=(rrule.match(/UNTIL=(\d{8})/)||[])[1];
-          sch={id:uid(),title:summary,type:'recurring',date,endDate:until?until.slice(0,4)+'-'+until.slice(4,6)+'-'+until.slice(6,8):'',time,days,memo:'구글 캘린더'};
+          sch={id:uid(),title:summary,type:'recurring',date,endDate:until?until.slice(0,4)+'-'+until.slice(4,6)+'-'+until.slice(6,8):'',time,days,recur:{freq:'weekly',interval:1,days},memo:'구글 캘린더'};
         } else {
           sch={id:uid(),title:summary,type:'once',date,endDate:'',time,days:[],memo:'구글 캘린더'};
         }
@@ -1291,6 +1492,183 @@ function importICS(input){
   rd.readAsText(f);
 }
 
+/* ================= 구글 드라이브 동기화 & 캘린더 ================= */
+const GOOGLE_CLIENT_ID='678418587056-3b5b8l2frhjlmjsh6clh2967isnnkjgk.apps.googleusercontent.com';
+const G_SCOPES='https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar.readonly';
+const DATA_FILE_NAME='my-schedule-data.json';
+let gToken=null, tokenClient=null, syncTimer=null;
+let syncStatus={connected:false, busy:false,
+  last: (typeof localStorage!=='undefined'&&localStorage.getItem('psm_lastSync'))||null,
+  fileId: (typeof localStorage!=='undefined'&&localStorage.getItem('psm_driveFileId'))||null};
+
+function initTokenClient(){
+  if(tokenClient) return true;
+  if(typeof google==='undefined'||!google.accounts) return false;
+  tokenClient=google.accounts.oauth2.initTokenClient({client_id:GOOGLE_CLIENT_ID, scope:G_SCOPES, callback:onGToken});
+  return true;
+}
+function connectDrive(){
+  if(!initTokenClient()) return alert('구글 연결 스크립트를 아직 불러오는 중이에요. 잠시 후 다시 시도해주세요.');
+  tokenClient.requestAccessToken({prompt:''});
+}
+function onGToken(resp){
+  if(resp.error){ syncStatus.connected=false; if(currentTab==='settings')renderSettings(); return; }
+  gToken=resp.access_token; syncStatus.connected=true;
+  localStorage.setItem('psm_syncOn','1');
+  syncNow();
+  if(state.filters.gcal) fetchGcalMonth(true);
+  if(currentTab==='settings') renderSettings();
+}
+function disconnectDrive(){
+  if(gToken&&typeof google!=='undefined') try{ google.accounts.oauth2.revoke(gToken); }catch(e){}
+  gToken=null; syncStatus.connected=false;
+  localStorage.removeItem('psm_syncOn');
+  renderSettings();
+}
+async function gfetch(url,opt={}){
+  opt.headers=Object.assign({},opt.headers,{Authorization:'Bearer '+gToken});
+  const r=await fetch(url,opt);
+  if(r.status===401){ gToken=null; syncStatus.connected=false; throw new Error('auth'); }
+  if(!r.ok) throw new Error('http '+r.status);
+  return r;
+}
+async function findDataFile(){
+  if(syncStatus.fileId) return syncStatus.fileId;
+  const q=encodeURIComponent(`name='${DATA_FILE_NAME}' and trashed=false`);
+  const r=await gfetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)`);
+  const j=await r.json();
+  if(j.files&&j.files.length){ syncStatus.fileId=j.files[0].id; localStorage.setItem('psm_driveFileId',syncStatus.fileId); return syncStatus.fileId; }
+  return null;
+}
+async function createDataFile(){
+  const boundary='psm'+Date.now();
+  const body=`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({name:DATA_FILE_NAME,mimeType:'application/json'})}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(state)}\r\n--${boundary}--`;
+  const r=await gfetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
+    {method:'POST',headers:{'Content-Type':'multipart/related; boundary='+boundary},body});
+  const j=await r.json();
+  syncStatus.fileId=j.id; localStorage.setItem('psm_driveFileId',j.id);
+}
+async function uploadData(){
+  if(!syncStatus.fileId) return;
+  await gfetch(`https://www.googleapis.com/upload/drive/v3/files/${syncStatus.fileId}?uploadType=media`,
+    {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(state)});
+}
+async function syncNow(){
+  if(!gToken||syncStatus.busy) return;
+  syncStatus.busy=true; if(currentTab==='settings')renderSettings();
+  try{
+    const id=await findDataFile();
+    if(id){
+      const r=await gfetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`);
+      let remote=null; try{ remote=await r.json(); }catch(e){}
+      if(remote&&remote.schedules&&remote.updatedAt&&(!state.updatedAt||remote.updatedAt>state.updatedAt)){
+        state=remote; localStorage.setItem('psm_v1',JSON.stringify(state)); state=load(); render();
+      } else if(state.updatedAt&&(!remote||!remote.updatedAt||state.updatedAt>remote.updatedAt)){
+        await uploadData();
+      }
+    } else {
+      await createDataFile();
+    }
+    syncStatus.last=new Date().toISOString(); localStorage.setItem('psm_lastSync',syncStatus.last);
+  }catch(e){}
+  syncStatus.busy=false; if(currentTab==='settings')renderSettings();
+}
+function scheduleCloudSave(){
+  if(!gToken||!syncStatus.fileId) return;
+  clearTimeout(syncTimer);
+  syncTimer=setTimeout(async()=>{
+    try{ await uploadData(); syncStatus.last=new Date().toISOString(); localStorage.setItem('psm_lastSync',syncStatus.last); }catch(e){}
+  },1500);
+}
+function syncLabel(){
+  if(!syncStatus.last) return '동기화 이력 없음';
+  const d=new Date(syncStatus.last);
+  return '마지막 동기화 '+ (d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+/* ----- 구글 캘린더 읽기 ----- */
+let gcalCache={};
+function gcalOn(ds){
+  const ym=view.y+'-'+view.m;
+  return (gcalCache[ym]||[]).filter(x=>x.date===ds);
+}
+async function fetchGcalMonth(force){
+  if(!gToken||!state.filters.gcal) return;
+  const ym=view.y+'-'+view.m;
+  if(!force&&gcalCache[ym]) return;
+  const first=new Date(view.y,view.m,1);
+  const gridStart=new Date(first); gridStart.setDate(1-monIdx(first));
+  const gridEnd=new Date(gridStart); gridEnd.setDate(gridStart.getDate()+42);
+  try{
+    const r=await gfetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250'
+      +'&timeMin='+encodeURIComponent(gridStart.toISOString())+'&timeMax='+encodeURIComponent(gridEnd.toISOString()));
+    const j=await r.json();
+    const items=[];
+    (j.items||[]).forEach(ev=>{
+      if(ev.status==='cancelled') return;
+      if(ev.start&&ev.start.date){
+        let d=ev.start.date; const end=(ev.end&&ev.end.date)||addDays(d,1);
+        let guard=0;
+        while(d<end&&guard++<62){ items.push({date:d,title:ev.summary||'(제목 없음)',time:''}); d=addDays(d,1); }
+      } else if(ev.start&&ev.start.dateTime){
+        const dt=new Date(ev.start.dateTime);
+        items.push({date:fmt(dt),title:ev.summary||'(제목 없음)',time:String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0')});
+      }
+    });
+    gcalCache[ym]=items;
+    if(currentTab==='cal') renderCalendar();
+  }catch(e){}
+}
+/* 자동 연결: 이전에 연결한 적 있으면 조용히 토큰 요청 */
+if(typeof window!=='undefined'){
+  window.addEventListener('load',()=>{
+    if(localStorage.getItem('psm_syncOn')==='1'){
+      let tries=0;
+      const t=setInterval(()=>{
+        tries++;
+        if(initTokenClient()){ clearInterval(t); tokenClient.requestAccessToken({prompt:''}); }
+        else if(tries>20) clearInterval(t);
+      },500);
+    }
+  });
+}
+
+/* ================= 실행 파라미터 (바로가기·공유 등록) ================= */
+function parseShareText(t){
+  const lines=t.split('\n').map(x=>x.trim()).filter(Boolean);
+  let title=(lines[0]||'').replace(/\[?(예매|예약|티켓)\s*(완료|확인|내역|정보)?\]?/g,'').replace(/^[\-–|:\s]+|[\-–|:\s]+$/g,'')||lines[0]||'';
+  let date='', time='';
+  const dm=t.match(/(20\d{2})[.\-\/년\s]{1,3}(\d{1,2})[.\-\/월\s]{1,3}(\d{1,2})/);
+  if(dm) date=dm[1]+'-'+String(+dm[2]).padStart(2,'0')+'-'+String(+dm[3]).padStart(2,'0');
+  const tm=t.match(/(오전|오후)?\s*(\d{1,2})\s*[:시]\s*(\d{2})?/);
+  if(tm){
+    let h=+tm[2]; const mi=tm[3]?+tm[3]:0;
+    if(tm[1]==='오후'&&h<12) h+=12;
+    if(h<=23&&mi<60) time=String(h).padStart(2,'0')+':'+String(mi).padStart(2,'0');
+  }
+  return {title:title.slice(0,60), date, time, memo:lines.slice(1,3).join(' ').slice(0,80)};
+}
+function handleLaunchParams(){
+  try{
+    const q=new URLSearchParams(location.search);
+    const act=q.get('action');
+    const st=q.get('s_title')||'', sx=q.get('s_text')||'', su=q.get('s_url')||'';
+    if(act==='log'){ switchTab('novel'); setTimeout(()=>openLogModal(),80); }
+    else if(act==='add'){ setTimeout(()=>openAddPicker(),80); }
+    else if(st||sx||su){
+      const info=parseShareText((st+'\n'+sx).trim());
+      setTimeout(()=>{
+        openScheduleModal(null, info.date||todayStr());
+        schedDraft.title=info.title;
+        schedDraft.time=info.time;
+        schedDraft.memo=info.memo;
+        renderScheduleModal();
+      },80);
+    }
+    if(act||st||sx||su) history.replaceState(null,'',location.pathname);
+  }catch(e){}
+}
+if(typeof window!=='undefined'){ window.addEventListener('DOMContentLoaded',handleLaunchParams); }
+
 /* ================= 메인 렌더 ================= */
 function render(){
   if(detailRoutineId){ renderRoutineDetail(); return; }
@@ -1301,14 +1679,8 @@ function render(){
   else if(currentTab==='settings') renderSettings();
 }
 
-/* ===== PWA: 서비스워커 & 바로가기 액션 ===== */
+/* ===== PWA: 서비스워커 ===== */
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('./sw.js').catch(()=>{}); }
-(function(){
-  const act=new URLSearchParams(location.search).get('action');
-  if(act==='log'){ switchTab('novel'); setTimeout(()=>openLogModal(),50); }
-  else if(act==='add'){ setTimeout(()=>openAddPicker(),50); }
-  if(act) history.replaceState(null,'',location.pathname);
-})();
 render();
 </script>
 </body>

@@ -14,6 +14,11 @@
     { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
     { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
+  "share_target": {
+    "action": "./index.html",
+    "method": "GET",
+    "params": { "title": "s_title", "text": "s_text", "url": "s_url" }
+  },
   "shortcuts": [
     {
       "name": "작업 기록",
