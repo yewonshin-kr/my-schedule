@@ -14,12 +14,12 @@
   --bg:#0F1412; --card:#1A211D; --panel:#151B18; --chip:#222B26; --field:#141A17;
   --text:#E9EFEB; --sub:#8FA096; --line:#26302A;
   --accent:#8FBCA5; --accent-soft:#233029; --ondark:#0F1512;
-  --sched:#8FBCA5; --routine:#8FB0D2; --routine-soft:#232B33; --review:#D4B483; --review-soft:#2C2620;
+  --sched:#8FBCA5; --routine:#8FB0D2; --routine-soft:#232B33; --review:#D4B483; --review-soft:#2C2620; --novel:#B5A3DB;
   --danger:#E08A8A;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
-body{font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;background:var(--bg);color:var(--text);max-width:520px;margin:0 auto;padding-bottom:calc(64px + env(safe-area-inset-bottom))}
+body{font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;background:var(--bg);color:var(--text);max-width:520px;margin:0 auto;padding-bottom:calc(110px + env(safe-area-inset-bottom))}
 button{font-family:inherit;border:none;background:none;cursor:pointer;color:inherit}
 input,select,textarea{font-family:inherit;font-size:15px;border:1px solid var(--line);border-radius:10px;padding:12px 14px;width:100%;background:var(--field);color:var(--text)}
 input::placeholder,textarea::placeholder{color:#5C6B62}
@@ -46,6 +46,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
 .fchip.on.c-sched{background:var(--sched)}
 .fchip.on.c-routine{background:var(--routine)}
 .fchip.on.c-review{background:var(--review)}
+.fchip.on.c-novel{background:var(--novel)}
 .fchip.gear{margin-left:auto;background:var(--card);color:var(--sub)}
 
 /* calendar */
@@ -63,7 +64,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
 .hol.jp{color:#7FA3C9}
 .evt{font-size:8.5px;line-height:1.35;padding:1.5px 2.5px;border-radius:4px;color:var(--ondark);font-weight:600;letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .evt.sched{background:var(--sched)}.evt.review{background:var(--review)}
-.evt.novel{background:transparent;color:var(--accent);border:1px solid var(--accent);font-weight:600}
+.evt.novel{background:transparent;color:var(--novel);border:1px solid var(--novel);font-weight:600}
 .evt.gcal{background:#2E3A34;color:#BFD9CB}
 .status-badge{font-size:10.5px;font-weight:700;border-radius:6px;padding:3px 8px;white-space:nowrap}
 .st-ongoing{color:var(--accent);background:var(--accent-soft)}
@@ -250,7 +251,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
 <!-- ===== 루틴 상세 ===== -->
 <div id="page-routine-detail" class="hidden">
   <div class="hdr">
-    <button class="back-btn" onclick="closeRoutineDetail()">‹ 루틴 목록</button>
+    <button class="back-btn" onclick="closeRoutineDetail()">‹ Routine</button>
   </div>
   <div class="page" id="routine-detail-body"></div>
 </div>
@@ -273,6 +274,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
     <div class="sec-title" style="display:flex;justify-content:space-between;align-items:center">작업 기록
       <span id="nv-log-toggle"></span></div>
     <div id="novel-worklog"></div>
+    <input type="file" id="csv-file" accept=".csv,text/csv" class="hidden" onchange="importWorklogCsv(this)">
     <div class="sec-title" style="display:flex;justify-content:space-between;align-items:center">작품
       <button style="color:var(--accent);font-size:13px;font-weight:600" onclick="openWorkModal()">＋ 새 작품</button></div>
     <div id="work-list"></div>
@@ -409,8 +411,10 @@ function moveMonth(n){ view.m+=n; if(view.m<0){view.m=11;view.y--;} if(view.m>11
 function goToday(){ const t=new Date(); view={y:t.getFullYear(),m:t.getMonth()}; render(); if(typeof fetchGcalMonth==='function') fetchGcalMonth(); }
 
 /* ================= 탭 ================= */
-function switchTab(t){
+function switchTab(t, fromPop){
+  if(!fromPop && t!==currentTab) pushHist('tab');
   currentTab=t; detailRoutineId=null;
+  if(typeof sessionStorage!=='undefined') try{ sessionStorage.setItem('psm_tab', t); }catch(e){}
   document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
   ['cal','routine','novel','review','settings'].forEach(p=>document.getElementById('page-'+p).classList.toggle('hidden',p!==t));
   document.getElementById('page-routine-detail').classList.add('hidden');
@@ -483,10 +487,10 @@ function reviewOn(rv,ds){ return rv.date<=ds && ds<=(rv.endDate||rv.date); }
 function renderFilterbar(){
   const f=state.filters, el=document.getElementById('filterbar');
   el.innerHTML =
-    chip('sched','스케줄',f.sched,'c-sched') +
-    chip('routine','루틴',f.routine,'c-routine') +
-    (state.works.length?chip('novel','웹소설',f.novel,'c-sched'):'') +
-    chip('review','후기',f.review,'c-review') +
+    chip('sched','Schedule',f.sched,'c-sched') +
+    chip('routine','Routine',f.routine,'c-routine') +
+    (state.works.length?chip('novel','Novel',f.novel,'c-novel'):'') +
+    chip('review','Review',f.review,'c-review') +
     '<button class="fchip gear" onclick="openFilterSheet()" aria-label="상세필터"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 4 21 4 14 12.5 14 19 10 21 10 12.5"/></svg></button>';
   function chip(k,label,on,cls){
     return `<button class="fchip ${on?'on':''} ${cls}" onclick="toggleFilter('${k}')">${label}</button>`;
@@ -500,16 +504,16 @@ function openFilterSheet(){
   html+='<label><input type="checkbox" checked disabled>한국 공휴일 (항상 표시)</label>';
   html+=`<label><input type="checkbox" ${f.jpHol?'checked':''} onchange="state.filters.jpHol=this.checked;save();renderCalendar()">일본 공휴일</label>`;
   html+=`<label><input type="checkbox" ${f.gcal?'checked':''} onchange="state.filters.gcal=this.checked;save();if(this.checked)fetchGcalMonth(true);renderCalendar()">구글 캘린더 일정 (드라이브 연결 필요)</label>`;
-  html+='</div><div class="sec-title">스케줄 유형</div><div class="check-list">';
+  html+='</div><div class="sec-title">Schedule 유형</div><div class="check-list">';
   schedTypes.forEach(([k,l])=>{ html+=`<label><input type="checkbox" ${!f.exSchedTypes.includes(k)?'checked':''} onchange="toggleEx('exSchedTypes','${k}')">${l}</label>`; });
   if(state.schedTags.length){
-    html+='</div><div class="sec-title">스케줄 태그</div><div class="check-list">';
+    html+='</div><div class="sec-title">Schedule 태그</div><div class="check-list">';
     state.schedTags.forEach(t=>{ html+=`<label><input type="checkbox" ${!f.exSchedTags.includes(t)?'checked':''} onchange="toggleEx('exSchedTags','${esc(t)}')">${esc(t)}</label>`; });
   }
-  html+='</div><div class="sec-title">루틴</div><div class="check-list">';
+  html+='</div><div class="sec-title">Routine</div><div class="check-list">';
   if(!state.routines.length) html+='<div class="empty" style="padding:8px 0">등록된 루틴이 없어요</div>';
   state.routines.forEach(r=>{ html+=`<label><input type="checkbox" ${!f.exRoutines.includes(r.id)?'checked':''} onchange="toggleEx('exRoutines','${r.id}')">${r.icon} ${esc(r.name)}</label>`; });
-  html+='</div><div class="sec-title">후기 카테고리</div><div class="check-list">';
+  html+='</div><div class="sec-title">Review 카테고리</div><div class="check-list">';
   state.categories.forEach(c=>{ html+=`<label><input type="checkbox" ${!f.exCats.includes(c)?'checked':''} onchange="toggleEx('exCats','${esc(c)}')">${catLabel(c)}</label>`; });
   html+='</div>';
   openSheet('캘린더 상세 필터', html);
@@ -526,9 +530,10 @@ function dayItems(ds){
   if(f.sched) out.scheds = state.schedules.filter(s=>!f.exSchedTypes.includes(s.type)&&!(s.tag&&f.exSchedTags.includes(s.tag))&&schedOccursOn(s,ds));
   if(f.routine) out.routines = state.routines.filter(r=>!f.exRoutines.includes(r.id)&&(routineGoalOn(r,ds)||r.checks[ds]||(r.recur.freq==='flex'&&ds<=todayStr()&&ds>=r.startDate)));
   if(f.review) out.reviews = state.reviews.filter(rv=>!rv.fromScheduleId&&!f.exCats.includes(rv.category)&&reviewOn(rv,ds)); // 스케줄 연동 후기는 캘린더에서 숨김(스케줄이 대신 표시)
-  if(f.novel) state.works.forEach(w=>{
-    w.episodes.forEach(e=>{ if(e.date===ds) out.novel.push({wid:w.id, t:w.title+' '+e.ep+'화', sub:'회차 업로드'}); });
-    (w.pubs||[]).forEach(p=>{ if(p.date===ds) out.novel.push({wid:w.id, t:w.title+' 출간', sub:'출간'+(p.label?' · '+p.label:'')}); });
+  out.pubs=[];
+  state.works.forEach(w=>{
+    if(f.novel) w.episodes.forEach(e=>{ if(e.date===ds) out.novel.push({wid:w.id, t:w.title+' '+e.ep+'화', sub:'회차 업로드'}); });
+    if(f.sched) (w.pubs||[]).forEach(p=>{ if(p.date===ds) out.pubs.push({wid:w.id, t:w.title+' 출간', sub:'출간'+(p.label?' · '+p.label:'')}); }); // 출간일은 스케줄 필터 소속
   });
   out.gcal = (f.gcal&&typeof gcalOn==='function') ? gcalOn(ds) : [];
   return out;
@@ -552,6 +557,7 @@ function renderCalendar(){
     if(hj) inner+=`<div class="hol jp">${hj}</div>`;
     const evts=[
       ...it.scheds.map(s=>s.type==='todo'?{t:(s.done?'☑ ':'☐ ')+s.title,cls:'todo'+(s.done?' done':'')}:{t:s.title,cls:'sched'}),
+      ...it.pubs.map(p=>({t:p.t,cls:'sched'})),
       ...it.gcal.map(g=>({t:g.title,cls:'gcal'})),
       ...it.novel.map(n=>({t:n.t,cls:'novel'})),
       ...it.reviews.map(r=>({t:r.title,cls:'review'}))
@@ -574,7 +580,13 @@ function openDaySheet(ds){
   let html='';
   const hols=[HOL_KR[ds]&&'🇰🇷 '+HOL_KR[ds], state.filters.jpHol&&HOL_JP[ds]&&'🇯🇵 '+HOL_JP[ds]].filter(Boolean);
   if(hols.length) html+=`<div style="font-size:12.5px;color:#C98A8A;font-weight:600;margin-bottom:10px">${hols.join(' · ')}</div>`;
-  if(it.scheds.length||it.reviews.length||it.routines.length||it.novel.length||it.gcal.length){
+  if(it.scheds.length||it.reviews.length||it.routines.length||it.novel.length||it.gcal.length||it.pubs.length){
+    it.pubs.forEach(n=>{
+      html+=`<div class="ds-item" onclick="closeSheet();switchTab('novel');openWorkDetail('${n.wid}')">
+        <span class="ds-badge" style="background:var(--sched)"></span>
+        <div class="ds-main"><div class="ds-title">${esc(n.t)}</div><div class="ds-sub">${n.sub}</div></div>
+      </div>`;
+    });
     it.gcal.forEach(g=>{
       html+=`<div class="ds-item">
         <span class="ds-badge" style="background:#5E8871"></span>
@@ -583,7 +595,7 @@ function openDaySheet(ds){
     });
     it.novel.forEach(n=>{
       html+=`<div class="ds-item" onclick="closeSheet();switchTab('novel');openWorkDetail('${n.wid}')">
-        <span class="ds-badge" style="background:transparent;border:2px solid var(--accent)"></span>
+        <span class="ds-badge" style="background:transparent;border:2px solid var(--novel)"></span>
         <div class="ds-main"><div class="ds-title">${esc(n.t)}</div><div class="ds-sub">${n.sub}</div></div>
       </div>`;
     });
@@ -644,14 +656,25 @@ function openDaySheet(ds){
 }
 
 /* ================= 공통 시트/모달 ================= */
+let sheetHist=false, detailHist=false;
+function pushHist(tag){
+  try{ if(typeof history!=='undefined'&&history.pushState) history.pushState({t:tag},''); }catch(e){}
+}
 function openSheet(title, bodyHtml, onclose){
   const root=document.getElementById('modal-root');
+  const wasOpen=!!root.innerHTML;
+  // 재렌더 시 스크롤 위치 유지 (옵션 선택 후 위로 튀는 문제 방지)
+  const prev=(root.querySelector?root.querySelector('.sheet'):null);
+  const st=prev?prev.scrollTop:0;
   root.innerHTML=`<div class="overlay" onclick="if(event.target===this)closeSheet()">
     <div class="sheet"><div class="sheet-hd"><h2>${title}</h2><button class="xbtn" onclick="closeSheet()">✕</button></div>${bodyHtml}</div>
   </div>`;
+  const sh=(root.querySelector?root.querySelector('.sheet'):null);
+  if(sh&&st) sh.scrollTop=st;
   root.dataset.onclose = onclose||'';
+  if(!wasOpen){ sheetHist=true; pushHist('sheet'); } // 새 레이어 열릴 때만 뒤로가기 이력 추가
 }
-function closeSheet(){ document.getElementById('modal-root').innerHTML=''; render(); }
+function closeSheet(){ sheetHist=false; document.getElementById('modal-root').innerHTML=''; render(); }
 function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function starStr(n){ let s='★'.repeat(Math.floor(n)); if(n%1) s+='☆'; return s; }
 
@@ -669,7 +692,7 @@ function openAddModal(kind){
 }
 function kindSeg(cur){
   const b=(k,l)=>`<button class="${cur===k?'on':''}" onclick="openAddModal('${k}')">${l}</button>`;
-  return `<div class="frow"><label>구분</label><div class="seg">${b('sched','스케줄')}${b('routine','루틴')}${b('review','후기')}</div></div>`;
+  return `<div class="frow"><label>구분</label><div class="seg">${b('sched','Schedule')}${b('routine','Routine')}${b('review','Review')}</div></div>`;
 }
 
 /* ================= 스케줄 모달 ================= */
@@ -838,12 +861,16 @@ function renderRoutines(){
 
 /* ----- 루틴 상세 ----- */
 function openRoutineDetail(id){
-  closeSheet(); detailRoutineId=id;
-  ['cal','routine','review','settings'].forEach(p=>document.getElementById('page-'+p).classList.add('hidden'));
+  const root=document.getElementById('modal-root');
+  if(root) root.innerHTML='';
+  if(sheetHist){ sheetHist=false; detailHist=true; } // 시트의 이력 항목을 상세 화면이 이어받음
+  else if(!detailHist){ detailHist=true; pushHist('detail'); }
+  detailRoutineId=id;
+  ['cal','routine','novel','review','settings'].forEach(p=>document.getElementById('page-'+p).classList.add('hidden'));
   document.getElementById('page-routine-detail').classList.remove('hidden');
   renderRoutineDetail();
 }
-function closeRoutineDetail(){ detailRoutineId=null; switchTab('routine'); }
+function closeRoutineDetail(){ detailHist=false; detailRoutineId=null; switchTab('routine', true); }
 function renderRoutineDetail(){
   const r=state.routines.find(x=>x.id===detailRoutineId);
   if(!r){ closeRoutineDetail(); return; }
@@ -986,41 +1013,53 @@ function rvMatch(r){
   if(rvCatFilter&&r.category!==rvCatFilter) return false;
   if(ui.rvYear&&r.date.slice(0,4)!==ui.rvYear) return false;
   if(ui.rvStars&&ui.rvStars.length){
-    const b=r.rating?Math.floor(r.rating):0;
-    if(!ui.rvStars.includes(b)) return false;
+    if(!ui.rvStars.includes(r.rating||0)) return false;
   }
   return true;
 }
-function toggleRvStar(n){
-  const a=state.ui.rvStars, x=a.indexOf(n);
-  x>=0?a.splice(x,1):a.push(n);
-  save(); renderReviews();
+function openRvSortSheet(){
+  const opts=[['dateDesc','시작일 느린 순'],['dateAsc','시작일 빠른 순'],['ratingDesc','별점 높은 순'],['ratingAsc','별점 낮은 순']];
+  openSheet('정렬', opts.map(([k,l])=>`<div class="settings-row" onclick="state.ui.rvSort='${k}';save();closeSheet()">
+    <span style="${state.ui.rvSort===k?'color:var(--accent);font-weight:700':''}">${l}</span>
+    ${state.ui.rvSort===k?'<span style="color:var(--accent)">✓</span>':''}</div>`).join(''));
+}
+function toggleRvStarF(v){
+  const a=state.ui.rvStars, x=a.indexOf(v);
+  x>=0?a.splice(x,1):a.push(v);
+  save(); openRvFilterSheet();
+}
+function openRvFilterSheet(){
+  const ui=state.ui;
+  const years=[...new Set(state.reviews.map(r=>r.date.slice(0,4)))].sort().reverse();
+  const stars=[5,4.5,4,3.5,3,2.5,2,1.5,1,0.5,0];
+  const html=`
+    <div class="sec-title" style="margin-top:0">연도</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="cchip ${!ui.rvYear?'on':''}" onclick="state.ui.rvYear='';save();openRvFilterSheet()">전체</button>
+      ${years.map(y=>`<button class="cchip ${ui.rvYear===y?'on':''}" onclick="state.ui.rvYear='${y}';save();openRvFilterSheet()">${y}년</button>`).join('')}
+    </div>
+    <div class="sec-title">별점 (다중 선택, 0.5 단위)</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      ${stars.map(v=>`<button class="cchip ${ui.rvStars.includes(v)?'on':''}" style="padding:6px 11px;font-size:12px" onclick="toggleRvStarF(${v})">${v===0?'없음':'★'+v}</button>`).join('')}
+    </div>
+    <button class="btn" style="margin-top:20px" onclick="closeSheet()">적용</button>
+    <button class="btn ghost" onclick="state.ui.rvYear='';state.ui.rvStars=[];save();openRvFilterSheet()">초기화</button>`;
+  openSheet('후기 필터', html);
 }
 function renderReviews(){
   const ui=state.ui;
   const chips=document.getElementById('rv-cat-chips');
   chips.innerHTML=`<button class="cchip ${!rvCatFilter?'on':''}" onclick="rvCatFilter=null;renderReviews()">전체</button>`+
     state.categories.map(c=>`<button class="cchip ${rvCatFilter===c?'on':''}" onclick="rvCatFilter='${esc(c)}';renderReviews()">${catLabel(c)}</button>`).join('');
-  const years=[...new Set(state.reviews.map(r=>r.date.slice(0,4)))].sort().reverse();
-  const starChip=n=>`<button class="cchip ${ui.rvStars.includes(n)?'on':''}" style="padding:6px 10px;font-size:12px" onclick="toggleRvStar(${n})">${n===0?'별점 없음':'★'+n}</button>`;
+  const filterOn = ui.rvYear||(ui.rvStars&&ui.rvStars.length);
+  const iconBtn=(on)=>`width:40px;height:40px;border-radius:11px;background:var(--card);border:1.5px solid ${on?'var(--review)':'var(--line)'};color:${on?'var(--review)':'var(--sub)'};display:flex;align-items:center;justify-content:center;flex-shrink:0`;
   const ctr=document.getElementById('rv-controls');
-  ctr.innerHTML=`<div style="display:flex;gap:8px;align-items:center;padding-bottom:10px">
-    <select style="flex:1.3;padding:9px 10px;font-size:13px" onchange="state.ui.rvSort=this.value;save();renderReviews()">
-      <option value="dateDesc" ${ui.rvSort==='dateDesc'?'selected':''}>시작일 느린 순</option>
-      <option value="dateAsc" ${ui.rvSort==='dateAsc'?'selected':''}>시작일 빠른 순</option>
-      <option value="ratingDesc" ${ui.rvSort==='ratingDesc'?'selected':''}>별점 높은 순</option>
-      <option value="ratingAsc" ${ui.rvSort==='ratingAsc'?'selected':''}>별점 낮은 순</option>
-    </select>
-    <select style="flex:1;padding:9px 10px;font-size:13px" onchange="state.ui.rvYear=this.value;save();renderReviews()">
-      <option value="" ${!ui.rvYear?'selected':''}>연도 전체</option>
-      ${years.map(y=>`<option value="${y}" ${ui.rvYear===y?'selected':''}>${y}년</option>`).join('')}
-    </select>
-  </div>
-  <div style="display:flex;gap:6px;flex-wrap:wrap;padding-bottom:10px">
-    ${[5,4,3,2,1,0].map(starChip).join('')}
-  </div>
-  <div class="seg" style="margin-bottom:14px">
-    ${['list','album','cal'].map(v=>`<button class="${ui.rvView===v?'on':''}" onclick="state.ui.rvView='${v}';save();renderReviews()">${v==='list'?'리스트':v==='album'?'앨범':'캘린더'}</button>`).join('')}
+  ctr.innerHTML=`<div style="display:flex;gap:8px;align-items:center;padding:8px 0 14px">
+    <div class="seg" style="flex:1">
+      ${['cal','list','album'].map(v=>`<button class="${ui.rvView===v?'on':''}" onclick="state.ui.rvView='${v}';save();renderReviews()">${v==='cal'?'Calendar':v==='list'?'List':'Album'}</button>`).join('')}
+    </div>
+    <button style="${iconBtn(false)}" aria-label="정렬" onclick="openRvSortSheet()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16"/><path d="M4 7l3-3 3 3"/><path d="M17 20V4"/><path d="M14 17l3 3 3-3"/></svg></button>
+    <button style="${iconBtn(filterOn)}" aria-label="필터" onclick="openRvFilterSheet()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 4 21 4 14 12.5 14 19 10 21 10 12.5"/></svg></button>
   </div>`;
   const list=document.getElementById('review-list');
   let arr=state.reviews.filter(rvMatch);
@@ -1327,7 +1366,8 @@ function renderNovel(){
     </div>`;
   // 작업 기록 (캘린더/리스트 전환, 디폴트 캘린더)
   document.getElementById('nv-log-toggle').innerHTML=
-    `<span class="seg" style="display:inline-flex;padding:2px">${['cal','list'].map(v=>`<button style="padding:5px 12px;font-size:12px" class="${state.ui.nvLogView===v?'on':''}" onclick="state.ui.nvLogView='${v}';save();renderNovel()">${v==='cal'?'캘린더':'리스트'}</button>`).join('')}</span>`;
+    `<button class="mini-act" style="margin-right:6px;padding:6px 10px;font-size:12px" onclick="csvGuide()">CSV</button>`+
+    `<span class="seg" style="display:inline-flex;padding:2px">${['cal','list'].map(v=>`<button style="padding:5px 12px;font-size:12px" class="${state.ui.nvLogView===v?'on':''}" onclick="state.ui.nvLogView='${v}';save();renderNovel()">${v==='cal'?'Calendar':'List'}</button>`).join('')}</span>`;
   const wlog=document.getElementById('novel-worklog');
   const ms=fmt(new Date(view.y,view.m,1)), me=fmt(new Date(view.y,view.m+1,0));
   if(state.ui.nvLogView==='cal'){
@@ -1605,6 +1645,108 @@ function deleteLog(){
   state.worklogs=state.worklogs.filter(x=>x.id!==logDraft.id);
   save(); closeSheet();
 }
+/* ----- 작업 기록 CSV 일괄 업로드 ----- */
+function csvGuide(){
+  openSheet('작업 기록 CSV 업로드', `
+    <div style="font-size:13px;color:#C4CDC7;line-height:1.7">
+      엑셀·구글 시트에서 아래 4개 열로 정리한 뒤 <b>CSV로 내보내서</b> 올려주세요.<br>
+      (구글 시트: 파일 → 다운로드 → 쉼표로 구분된 값 .csv)
+    </div>
+    <div class="card" style="font-size:12px;font-family:monospace;line-height:1.9;margin-top:12px">
+      날짜,작품,유형,글자수<br>
+      2026-07-01,검은 달,집필,5200<br>
+      2026-07-02,검은 달,시놉시스,<br>
+      2026-07-03,검은 달,,3100
+    </div>
+    <div style="font-size:11.5px;color:var(--sub);line-height:1.8;margin-top:10px">
+      · 날짜: 2026-07-01 / 2026.07.01 / 2026/7/1 모두 인식<br>
+      · 작품: 앱에 등록된 작품명과 정확히 일치해야 해요<br>
+      · 유형: 집필/시놉시스/교정/기타 — 비워두면 글자수가 있을 때 집필로 처리<br>
+      · 같은 날짜·작품·유형 기록이 이미 있으면 건너뛰어요 (재업로드 안전)
+    </div>
+    <button class="btn" onclick="document.getElementById('csv-file').click()">CSV 파일 선택</button>
+    <div class="sec-title">또는 구글 시트에서 바로 가져오기</div>
+    <div class="frow"><label>구글 시트 주소 (같은 4개 열, 첫 번째 시트 기준)</label>
+      <input id="sheet-url" placeholder="https://docs.google.com/spreadsheets/d/..." value="${esc(localStorage.getItem('psm_sheetUrl')||'')}"></div>
+    <button class="btn ghost" onclick="importFromSheet()">시트에서 가져오기</button>
+    <div style="font-size:11px;color:var(--sub);margin-top:8px">구글 계정 연결이 필요해요. 최초 1회 시트 읽기 권한 동의 창이 뜰 수 있어요.</div>
+  `);
+}
+async function importFromSheet(){
+  const el=document.getElementById('sheet-url');
+  const url=(el&&el.value||'').trim();
+  const m=url.match(/spreadsheets\/d\/([\w-]+)/);
+  if(!m) return alert('구글 시트 주소가 올바르지 않아요');
+  if(!gToken) return alert('먼저 Settings에서 구글 계정을 연결해주세요');
+  localStorage.setItem('psm_sheetUrl', url);
+  try{
+    const r=await gfetch(`https://sheets.googleapis.com/v4/spreadsheets/${m[1]}/values/A1:D10000`);
+    const j=await r.json();
+    const res=applyWorklogRows(j.values||[]);
+    closeSheet();
+    alert(`등록 ${res.ok}건 · 중복 건너뜀 ${res.dup}건 · 실패 ${res.fail}건${res.unknown.length?'\n등록 안 된 작품명: '+res.unknown.join(', '):''}`);
+  }catch(e){
+    if(String(e).includes('403')||String(e).includes('auth')){
+      alert('시트 읽기 권한이 필요해요. 구글 동의 창에서 허용해주세요.');
+      if(initTokenClient()) tokenClient.requestAccessToken({prompt:'consent'});
+    } else alert('시트를 불러오지 못했어요. 주소와 공유 권한을 확인해주세요.');
+  }
+}
+function splitCsvLine(line){
+  const out=[]; let cur='', q=false;
+  for(const ch of line){
+    if(ch==='"'){ q=!q; continue; }
+    if(ch===','&&!q){ out.push(cur); cur=''; continue; }
+    cur+=ch;
+  }
+  out.push(cur);
+  return out.map(s=>s.trim());
+}
+function normCsvDate(s){
+  const m=String(s).trim().match(/^(20\d{2})[.\-\/](\d{1,2})[.\-\/](\d{1,2})/);
+  if(!m) return '';
+  return m[1]+'-'+String(+m[2]).padStart(2,'0')+'-'+String(+m[3]).padStart(2,'0');
+}
+function applyWorklogCsv(text){
+  return applyWorklogRows(text.split(/\r?\n/).filter(l=>l.trim()).map(splitCsvLine));
+}
+function applyWorklogRows(rows){
+  const KIND_MAP={'집필':'write','시놉시스':'synop','시놉':'synop','교정':'edit','기타':'etc'};
+  let ok=0, dup=0, fail=0; const unknown=new Set();
+  (rows||[]).forEach(c=>{
+    if(!c||!c.length) return;
+    if(String(c[0]||'').includes('날짜')) return; // 헤더 행
+    const date=normCsvDate(c[0]||''), wname=String(c[1]||'').trim();
+    if(!date||date>todayStr()){ fail++; return; }
+    const w=state.works.find(x=>x.title===wname);
+    if(!w){ fail++; if(wname) unknown.add(wname); return; }
+    let kind=KIND_MAP[String(c[2]||'').trim()]||'';
+    let chars=parseInt(String(c[3]||'').replace(/[,\s"]/g,''),10);
+    if(isNaN(chars)||chars<0) chars=0;
+    if(!kind) kind=chars>0?'write':'etc';
+    if(state.worklogs.some(l=>l.date===date&&l.workId===w.id&&(l.kind||'write')===kind)){ dup++; return; }
+    state.worklogs.push({id:uid(), date, workId:w.id, kind, chars});
+    ok++;
+  });
+  save();
+  return {ok,dup,fail,unknown:[...unknown]};
+}
+function importWorklogCsv(input){
+  const f=input.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    let text='';
+    try{
+      text=new TextDecoder('utf-8',{fatal:false}).decode(rd.result);
+      if(text.includes('�')) text=new TextDecoder('euc-kr').decode(rd.result); // 엑셀 CSV(한글 인코딩) 대응
+    }catch(e){ alert('파일을 읽을 수 없어요'); input.value=''; return; }
+    const r=applyWorklogCsv(text);
+    closeSheet();
+    alert(`등록 ${r.ok}건 · 중복 건너뜀 ${r.dup}건 · 실패 ${r.fail}건${r.unknown.length?'\n등록 안 된 작품명: '+r.unknown.join(', '):''}`);
+    input.value='';
+  };
+  rd.readAsArrayBuffer(f);
+}
 function openGoalModal(){
   const g=state.novelGoal;
   openSheet('작업 목표', `
@@ -1637,21 +1779,21 @@ function dlRow(label, actions){
 }
 function openDataListSheet(){
   const del=(fn,arg)=>`<button style="color:var(--danger);font-size:13px" onclick="${fn}('${esc(arg)}')">삭제</button>`;
-  let html='<div class="sec-title" style="margin-top:0">후기 카테고리</div><div class="card">';
+  let html='<div class="sec-title" style="margin-top:0">Review 카테고리</div><div class="card">';
   html+=state.categories.map(c=>dlRow(catLabel(c),
     `<button style="color:var(--accent);font-size:13px" onclick="editCatIcon('${esc(c)}')">아이콘</button>`+del('removeCategory',c))).join('');
   html+=`<div class="settings-row" style="color:var(--accent);font-weight:600" onclick="openCatModal('datalist')">＋ 카테고리 추가</div></div>`;
-  html+='<div class="sec-title">스케줄 태그</div><div class="card">';
+  html+='<div class="sec-title">Schedule 태그</div><div class="card">';
   html+=state.schedTags.map(t=>dlRow('#'+esc(t), del('removeSchedTag',t))).join('');
   html+=`<div class="settings-row" style="color:var(--accent);font-weight:600" onclick="addSchedTagDL()">＋ 태그 추가</div></div>`;
-  html+='<div class="sec-title">후기 · 본 곳 (영화)</div><div class="card">';
+  html+='<div class="sec-title">Review · 본 곳 (영화)</div><div class="card">';
   html+=state.moviePlaces.map(p=>dlRow(esc(p)+(p==='OTT'?' <span style="font-size:10px;color:var(--sub)">(OTT 선택 연결)</span>':''),
     p==='OTT'?'<span style="font-size:12px;color:var(--sub)">고정</span>':del('removeMoviePlace',p))).join('');
   html+=`<div class="settings-row" style="color:var(--accent);font-weight:600" onclick="addMoviePlace()">＋ 본 곳 추가</div></div>`;
-  html+='<div class="sec-title">후기 · OTT 서비스</div><div class="card">';
+  html+='<div class="sec-title">Review · OTT 서비스</div><div class="card">';
   html+=state.ottList.map(o=>dlRow(esc(o), del('removeOtt',o))).join('');
   html+=`<div class="settings-row" style="color:var(--accent);font-weight:600" onclick="addOtt()">＋ OTT 추가</div></div>`;
-  html+='<div class="sec-title">루틴 그룹</div><div class="card">';
+  html+='<div class="sec-title">Routine 그룹</div><div class="card">';
   html+=state.groups.length?state.groups.map(g=>dlRow((g.icon||'📁')+' '+esc(g.name), del('removeGroupDL',g.id))).join(''):'<div class="empty" style="padding:10px 0">그룹 없음</div>';
   html+=`<div class="settings-row" style="color:var(--accent);font-weight:600" onclick="openGroupModal('datalist')">＋ 그룹 추가</div></div>`;
   openSheet('데이터 리스트 관리', html);
@@ -1764,7 +1906,7 @@ function importICS(input){
 
 /* ================= 구글 드라이브 동기화 & 캘린더 ================= */
 const GOOGLE_CLIENT_ID='678418587056-3b5b8l2frhjlmjsh6clh2967isnnkjgk.apps.googleusercontent.com';
-const G_SCOPES='https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar.readonly';
+const G_SCOPES='https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/spreadsheets.readonly';
 const DATA_FILE_NAME='my-schedule-data.json';
 let gToken=null, tokenClient=null, syncTimer=null;
 let syncStatus={connected:false, busy:false,
@@ -1957,6 +2099,26 @@ function handleLaunchParams(){
   }catch(e){}
 }
 if(typeof window!=='undefined'){ window.addEventListener('DOMContentLoaded',handleLaunchParams); }
+
+/* ===== 안드로이드 뒤로가기: 시트 → 상세 → 캘린더 순으로 닫기 ===== */
+if(typeof window!=='undefined'){
+  window.addEventListener('popstate',()=>{
+    const root=document.getElementById('modal-root');
+    if(root&&root.innerHTML){ sheetHist=false; root.innerHTML=''; render(); return; }
+    if(detailRoutineId){ detailHist=false; detailRoutineId=null; switchTab('routine', true); return; }
+    if(currentTab!=='cal'){ switchTab('cal', true); return; }
+  });
+}
+
+/* ===== 새로고침 시 머물던 탭 유지 ===== */
+if(typeof window!=='undefined'){
+  window.addEventListener('DOMContentLoaded',()=>{
+    try{
+      const t=sessionStorage.getItem('psm_tab');
+      if(t&&t!==currentTab&&['cal','routine','novel','review','settings'].includes(t)) switchTab(t, true);
+    }catch(e){}
+  });
+}
 
 /* ===== 캘린더 좌우 스와이프로 월 이동 ===== */
 if(typeof window!=='undefined'){
