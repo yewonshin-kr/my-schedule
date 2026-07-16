@@ -1250,7 +1250,11 @@ function renderReviewModal(){
         ${state.categories.map(c=>`<option value="${esc(c)}" ${d.category===c?'selected':''}>${catLabel(c)}</option>`).join('')}
         <option value="__new">＋ 카테고리 추가…</option>
       </select></div>
-    <div class="frow"><label>제목 *</label><input placeholder="예: 데스노트, 듄 파트3" value="${esc(d.title)}" oninput="rvDraft.title=this.value"></div>
+    <div class="frow"><label>제목 *</label>
+      <div style="display:flex;gap:8px">
+        <input style="flex:1" placeholder="예: 데스노트, 듄 파트3" value="${esc(d.title)}" oninput="rvDraft.title=this.value">
+        <button class="mini-act" style="flex-shrink:0" onclick="searchInfo()">정보 검색</button>
+      </div></div>
     ${linkUI}
     <div class="frow-2">
       <div class="frow"><label>시작일 *</label><input type="date" value="${d.date}" onchange="rvDraft.date=this.value"></div>
@@ -1278,6 +1282,51 @@ function renderReviewModal(){
     <button class="btn" onclick="saveReview()">저장</button>
     ${d.id?`<button class="btn ghost" onclick="addNthView()">＋ ${(d.round||1)+1}차 관람 추가</button><button class="btn del" onclick="deleteReview()">삭제</button>`:''}
   `);
+}
+/* ----- 정보 검색 (알라딘·문화정보원·KMDb 프록시) ----- */
+let searchItems=[];
+function deEnt(s){ return String(s||'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'"); }
+function infoPathFor(cat){
+  if(cat==='책') return '/book';
+  if(cat==='영화'||cat==='애니메이션') return '/movie';
+  return '/perf'; // 연뮤·콘서트·전시 및 기타 → 공연·행사 검색
+}
+async function searchInfo(){
+  const q=(rvDraft.title||'').trim();
+  if(!q) return alert('제목을 먼저 입력한 뒤 검색해주세요');
+  const path=infoPathFor(rvDraft.category);
+  openSheet('정보 검색', '<div class="empty">검색 중…</div>');
+  try{
+    const r=await fetch(API_PROXY+path+'?q='+encodeURIComponent(q));
+    if(!r.ok){
+      if(path==='/movie'){ openSheet('정보 검색', '<div class="empty">영화 검색은 KMDb 키 등록 후 사용할 수 있어요</div><button class="btn ghost" onclick="renderReviewModal()">돌아가기</button>'); return; }
+      throw new Error('http');
+    }
+    const j=await r.json();
+    searchItems=(j.items||[]).slice(0,10).map(it=>({
+      title:deEnt(it.title), img:(it.img||'').replace(/^http:\/\//,'https://'),
+      date:it.date||'', sub:deEnt(it.sub||'')
+    }));
+    if(!searchItems.length){
+      openSheet('정보 검색', `<div class="empty">'${esc(q)}' 검색 결과가 없어요</div><button class="btn ghost" onclick="renderReviewModal()">돌아가기</button>`);
+      return;
+    }
+    openSheet('검색 결과 — 탭해서 적용', searchItems.map((it,i)=>`
+      <div class="ds-item" onclick="pickInfo(${i})">
+        ${it.img?`<img src="${esc(it.img)}" referrerpolicy="no-referrer" style="width:44px;height:60px;object-fit:cover;border-radius:7px;flex-shrink:0;background:var(--chip)" onerror="this.style.visibility='hidden'">`:''}
+        <div class="ds-main"><div class="ds-title">${esc(it.title)}</div>
+        <div class="ds-sub">${esc([it.date,it.sub].filter(Boolean).join(' · '))}</div></div>
+      </div>`).join('')+`<button class="btn ghost" style="margin-top:14px" onclick="renderReviewModal()">돌아가기</button>`);
+  }catch(e){
+    openSheet('정보 검색', '<div class="empty">검색에 실패했어요. 잠시 후 다시 시도해주세요.</div><button class="btn ghost" onclick="renderReviewModal()">돌아가기</button>');
+  }
+}
+function pickInfo(i){
+  const it=searchItems[i]; if(!it) return;
+  rvDraft.title=it.title;
+  if(it.img) rvDraft.img=it.img;
+  if(/^\d{4}-\d{2}-\d{2}$/.test(it.date)&&it.date<=todayStr()) rvDraft.date=it.date;
+  renderReviewModal();
 }
 function setRating(ev,i){
   const rect=ev.currentTarget.getBoundingClientRect();
@@ -1906,6 +1955,7 @@ function importICS(input){
 
 /* ================= 구글 드라이브 동기화 & 캘린더 ================= */
 const GOOGLE_CLIENT_ID='678418587056-3b5b8l2frhjlmjsh6clh2967isnnkjgk.apps.googleusercontent.com';
+const API_PROXY='https://my-schedule-api.ravin0609.workers.dev'; // 한국 공개 DB 중계 프록시
 const G_SCOPES='https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/spreadsheets.readonly';
 const DATA_FILE_NAME='my-schedule-data.json';
 let gToken=null, tokenClient=null, syncTimer=null;
