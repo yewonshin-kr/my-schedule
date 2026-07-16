@@ -81,7 +81,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
 .more{font-size:9.5px;color:var(--sub);text-align:center}
 
 /* pages & cards */
-.page{padding:0 20px 28px}
+.page{padding:0 20px 72px}
 .card{background:var(--card);border-radius:16px;padding:18px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.2)}
 .sec-title{font-size:13px;font-weight:700;color:var(--sub);margin:24px 2px 10px}
 .empty{color:var(--sub);font-size:13.5px;text-align:center;padding:28px 0}
@@ -1284,42 +1284,56 @@ function renderReviewModal(){
   `);
 }
 /* ----- 정보 검색 (알라딘·문화정보원·KMDb 프록시) ----- */
-let searchItems=[];
+let searchItems=[], searchPage=1, searchQ='', searchPath='', searchHasMore=false;
 function deEnt(s){ return String(s||'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'"); }
 function infoPathFor(cat){
   if(cat==='책') return '/book';
   if(cat==='영화'||cat==='애니메이션') return '/movie';
-  return '/perf'; // 연뮤·콘서트·전시 및 기타 → 공연·행사 검색
+  return '/perf'; // 연뮤·콘서트·전시 및 기타 → 공연·전시·행사 검색
 }
 async function searchInfo(){
   const q=(rvDraft.title||'').trim();
   if(!q) return alert('제목을 먼저 입력한 뒤 검색해주세요');
-  const path=infoPathFor(rvDraft.category);
+  searchQ=q; searchPath=infoPathFor(rvDraft.category); searchPage=1; searchItems=[];
   openSheet('정보 검색', '<div class="empty">검색 중…</div>');
+  await runSearch(false);
+}
+async function searchMore(){
+  searchPage++;
+  await runSearch(true);
+}
+async function runSearch(append){
   try{
-    const r=await fetch(API_PROXY+path+'?q='+encodeURIComponent(q));
+    const r=await fetch(API_PROXY+searchPath+'?q='+encodeURIComponent(searchQ)+'&p='+searchPage);
     if(!r.ok){
-      if(path==='/movie'){ openSheet('정보 검색', '<div class="empty">영화 검색은 KMDb 키 등록 후 사용할 수 있어요</div><button class="btn ghost" onclick="renderReviewModal()">돌아가기</button>'); return; }
+      if(searchPath==='/movie'){ openSheet('정보 검색', '<div class="empty">영화 검색은 KMDb 키 승인 후 사용할 수 있어요</div><button class="btn ghost" onclick="renderReviewModal()">돌아가기</button>'); return; }
       throw new Error('http');
     }
     const j=await r.json();
-    searchItems=(j.items||[]).slice(0,10).map(it=>({
+    const items=(j.items||[]).map(it=>({
       title:deEnt(it.title), img:(it.img||'').replace(/^http:\/\//,'https://'),
       date:it.date||'', sub:deEnt(it.sub||'')
     }));
+    searchHasMore = items.length>=10;
+    searchItems = append ? searchItems.concat(items) : items;
     if(!searchItems.length){
-      openSheet('정보 검색', `<div class="empty">'${esc(q)}' 검색 결과가 없어요</div><button class="btn ghost" onclick="renderReviewModal()">돌아가기</button>`);
+      openSheet('정보 검색', `<div class="empty">'${esc(searchQ)}' 검색 결과가 없어요</div><button class="btn ghost" onclick="renderReviewModal()">돌아가기</button>`);
       return;
     }
-    openSheet('검색 결과 — 탭해서 적용', searchItems.map((it,i)=>`
-      <div class="ds-item" onclick="pickInfo(${i})">
-        ${it.img?`<img src="${esc(it.img)}" referrerpolicy="no-referrer" style="width:44px;height:60px;object-fit:cover;border-radius:7px;flex-shrink:0;background:var(--chip)" onerror="this.style.visibility='hidden'">`:''}
-        <div class="ds-main"><div class="ds-title">${esc(it.title)}</div>
-        <div class="ds-sub">${esc([it.date,it.sub].filter(Boolean).join(' · '))}</div></div>
-      </div>`).join('')+`<button class="btn ghost" style="margin-top:14px" onclick="renderReviewModal()">돌아가기</button>`);
+    renderSearchResults();
   }catch(e){
     openSheet('정보 검색', '<div class="empty">검색에 실패했어요. 잠시 후 다시 시도해주세요.</div><button class="btn ghost" onclick="renderReviewModal()">돌아가기</button>');
   }
+}
+function renderSearchResults(){
+  openSheet(`검색 결과 ${searchItems.length}건 — 탭해서 적용`, searchItems.map((it,i)=>`
+    <div class="ds-item" onclick="pickInfo(${i})">
+      ${it.img?`<img src="${esc(it.img)}" referrerpolicy="no-referrer" style="width:44px;height:60px;object-fit:cover;border-radius:7px;flex-shrink:0;background:var(--chip)" onerror="this.style.visibility='hidden'">`:''}
+      <div class="ds-main"><div class="ds-title">${esc(it.title)}</div>
+      <div class="ds-sub">${esc([it.date,it.sub].filter(Boolean).join(' · '))}</div></div>
+    </div>`).join('')
+    +(searchHasMore?`<button class="btn ghost" style="margin-top:14px" onclick="searchMore()">더 보기</button>`:'')
+    +`<button class="btn ghost" style="margin-top:${searchHasMore?'8px':'14px'}" onclick="renderReviewModal()">돌아가기</button>`);
 }
 function pickInfo(i){
   const it=searchItems[i]; if(!it) return;
@@ -2182,6 +2196,17 @@ if(typeof window!=='undefined'){
       const dx=e.changedTouches[0].clientX-sx, dy=e.changedTouches[0].clientY-sy;
       if(Math.abs(dx)>60 && Math.abs(dy)<50) moveMonth(dx<0?1:-1);
     },{passive:true});
+    // 리뷰 캘린더뷰에서도 좌우 스와이프로 월 이동
+    const rl=document.getElementById('review-list');
+    if(rl){
+      let rx=0, ry=0;
+      rl.addEventListener('touchstart',e=>{ rx=e.touches[0].clientX; ry=e.touches[0].clientY; },{passive:true});
+      rl.addEventListener('touchend',e=>{
+        if(currentTab!=='review'||state.ui.rvView!=='cal') return;
+        const dx=e.changedTouches[0].clientX-rx, dy=e.changedTouches[0].clientY-ry;
+        if(Math.abs(dx)>60 && Math.abs(dy)<50) moveMonth(dx<0?1:-1);
+      },{passive:true});
+    }
   });
 }
 
