@@ -51,7 +51,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
 .fchip.gear{margin-left:auto;background:var(--card);color:var(--sub)}
 
 /* calendar */
-.cal-wrap{padding:8px 14px 64px}
+.cal-wrap{padding:8px 14px 110px} /* 여백 증가 */
 .cal-week{display:grid;grid-template-columns:repeat(7,1fr);font-size:12.5px;color:var(--sub);text-align:center;padding:10px 0}
 .cal-week .sat{color:#7FA3C9}.cal-week .sun{color:#C98A8A}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;background:transparent}
@@ -806,18 +806,19 @@ let sheetHist=false, detailHist=false;
 function pushHist(tag){
   try{ if(typeof history!=='undefined'&&history.pushState) history.pushState({t:tag},''); }catch(e){}
 }
-function openSheet(title, bodyHtml, onclose){
+function openSheet(title, bodyHtml, customCloseAction){
   const root=document.getElementById('modal-root');
   const wasOpen=!!root.innerHTML;
   // 재렌더 시 스크롤 위치 유지 (옵션 선택 후 위로 튀는 문제 방지)
   const prev=(root.querySelector?root.querySelector('.sheet'):null);
   const st=prev?prev.scrollTop:0;
-  root.innerHTML=`<div class="overlay" onclick="if(event.target===this)closeSheet()">
-    <div class="sheet"><div class="sheet-hd"><h2>${title}</h2><button class="xbtn" onclick="closeSheet()">✕</button></div>${bodyHtml}</div>
+  const action = customCloseAction || 'closeSheet()'; // 사용자 지정 닫기 동작 처리
+  root.innerHTML=`<div class="overlay" onclick="if(event.target===this)${action}">
+    <div class="sheet"><div class="sheet-hd"><h2>${title}</h2><button class="xbtn" onclick="${action}">✕</button></div>${bodyHtml}</div>
   </div>`;
   const sh=(root.querySelector?root.querySelector('.sheet'):null);
   if(sh&&st) sh.scrollTop=st;
-  root.dataset.onclose = onclose||'';
+  root.dataset.onclose = customCloseAction||'';
   if(!wasOpen){ sheetHist=true; pushHist('sheet'); } // 새 레이어 열릴 때만 뒤로가기 이력 추가
 }
 function closeSheet(){ sheetHist=false; document.getElementById('modal-root').innerHTML=''; render(); }
@@ -1454,7 +1455,7 @@ async function searchInfo(){
   const q=(rvDraft.title||'').trim();
   if(!q) return alert('제목을 먼저 입력한 뒤 검색해주세요');
   searchQ=q; searchPath=infoPathFor(rvDraft.category); searchPage=1; searchItems=[];
-  openSheet('정보 검색', '<div class="empty">검색 중…</div>');
+  openSheet('정보 검색', '<div class="empty">검색 중…</div>', 'renderReviewModal()');
   await runSearch(false);
 }
 async function searchMore(){
@@ -1466,7 +1467,7 @@ async function runSearch(append){
     const r=await fetch(API_PROXY+searchPath+'?q='+encodeURIComponent(searchQ)+'&p='+searchPage);
     if(!r.ok){
       if(searchPath==='/tmdb'||searchPath==='/game'){
-        openSheet('정보 검색', `<div class="empty">${searchPath==='/tmdb'?'영화·드라마·애니':'게임'} 검색은 중계 서버에<br>${searchPath==='/tmdb'?'TMDB':'RAWG'} 연동을 추가한 뒤 사용할 수 있어요</div><button class="btn ghost" onclick="renderReviewModal()">돌아가기</button>`);
+        openSheet('정보 검색', `<div class="empty">${searchPath==='/tmdb'?'영화·드라마·애니':'게임'} 검색은 중계 서버에<br>${searchPath==='/tmdb'?'TMDB':'RAWG'} 연동을 추가한 뒤 사용할 수 있어요</div>`, 'renderReviewModal()');
         return;
       }
       throw new Error('http');
@@ -1479,12 +1480,12 @@ async function runSearch(append){
     searchHasMore = (typeof j.hasMore==='boolean') ? j.hasMore : items.length>=10;
     searchItems = append ? searchItems.concat(items) : items;
     if(!searchItems.length){
-      openSheet('정보 검색', `<div class="empty">'${esc(searchQ)}' 검색 결과가 없어요</div><button class="btn ghost" onclick="renderReviewModal()">돌아가기</button>`);
+      openSheet('정보 검색', `<div class="empty">'${esc(searchQ)}' 검색 결과가 없어요</div>`, 'renderReviewModal()');
       return;
     }
     renderSearchResults();
   }catch(e){
-    openSheet('정보 검색', '<div class="empty">검색에 실패했어요. 잠시 후 다시 시도해주세요.</div><button class="btn ghost" onclick="renderReviewModal()">돌아가기</button>');
+    openSheet('정보 검색', '<div class="empty">검색에 실패했어요. 잠시 후 다시 시도해주세요.</div>', 'renderReviewModal()');
   }
 }
 function renderSearchResults(){
@@ -1494,8 +1495,7 @@ function renderSearchResults(){
       <div class="ds-main"><div class="ds-title">${esc(it.title)}</div>
       <div class="ds-sub">${esc([it.date,it.sub].filter(Boolean).join(' · '))}</div></div>
     </div>`).join('')
-    +(searchHasMore?`<button class="btn ghost" style="margin-top:14px" onclick="searchMore()">더 보기</button>`:'')
-    +`<button class="btn ghost" style="margin-top:${searchHasMore?'8px':'14px'}" onclick="renderReviewModal()">돌아가기</button>`);
+    +(searchHasMore?`<button class="btn ghost" style="margin-top:14px" onclick="searchMore()">더 보기</button>`:''), 'renderReviewModal()');
 }
 function pickInfo(i){
   const it=searchItems[i]; if(!it) return;
@@ -1963,7 +1963,7 @@ function importWorklogCsv(input){
     let text='';
     try{
       text=new TextDecoder('utf-8',{fatal:false}).decode(rd.result);
-      if(text.includes('�')) text=new TextDecoder('euc-kr').decode(rd.result); // 엑셀 CSV(한글 인코딩) 대응
+      if(text.includes('')) text=new TextDecoder('euc-kr').decode(rd.result); // 엑셀 CSV(한글 인코딩) 대응
     }catch(e){ alert('파일을 읽을 수 없어요'); input.value=''; return; }
     const r=applyWorklogCsv(text);
     closeSheet();
