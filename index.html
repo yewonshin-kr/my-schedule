@@ -239,6 +239,30 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
 .mini-d.inwk{background:var(--accent-soft)}
 .mini-d.wk-first{border-radius:8px 0 0 8px}.mini-d.wk-last{border-radius:0 8px 8px 0}
 .mini-d.today{background:var(--accent);color:var(--ondark);border-radius:8px}
+
+/* ===== 통계 (Stats) ===== */
+.year-chips{display:flex;gap:6px;overflow-x:auto;padding:2px 0 12px}
+.stat-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat-card{background:var(--card);border-radius:13px;padding:14px 8px;text-align:center}
+.stat-card .v{font-size:21px;font-weight:800;color:var(--review)}
+.stat-card .k{font-size:11px;color:var(--sub);margin-top:4px}
+.stat-sec{background:var(--card);border-radius:13px;padding:15px 14px;margin-top:10px}
+.stat-sec h3{font-size:13px;font-weight:700;margin-bottom:13px;display:flex;justify-content:space-between;align-items:baseline}
+.stat-sec .hint{font-size:10px;color:var(--sub);font-weight:500}
+.vbar-wrap{display:flex;align-items:flex-end;gap:4px;height:96px}
+.vbar{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;font-size:9px;color:var(--sub);height:100%;cursor:pointer}
+.vbar .cnt{font-size:9px;color:#C4CDC7}
+.vbar .bar{width:100%;max-width:26px;background:var(--review);border-radius:4px 4px 0 0;opacity:.85}
+.hbar-row{display:flex;align-items:center;gap:9px;margin-bottom:9px;font-size:12px}
+.hbar-row:last-child{margin-bottom:0}
+.hbar-row .lbl{width:92px;flex-shrink:0;color:#C4CDC7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hbar-row .track{flex:1;height:8px;background:var(--chip);border-radius:4px;overflow:hidden}
+.hbar-row .fill{height:100%;background:var(--review);border-radius:4px;opacity:.85}
+.hbar-row .val{width:32px;text-align:right;color:var(--sub);font-size:11.5px;flex-shrink:0}
+.report-rt .hbar-row .fill,.report-rt .vbar .bar{background:var(--accent)}
+.report-rt .stat-card .v{color:var(--accent)}
+.report-nv .hbar-row .fill,.report-nv .vbar .bar{background:var(--novel)}
+.report-nv .stat-card .v{color:var(--novel)}
 </style>
 </head>
 <body>
@@ -281,7 +305,13 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
       <div class="mtitle" id="rt-title"></div>
       <button class="icon-btn" onclick="moveMonth(1)">›</button>
     </div>
-    <button class="today-btn" onclick="goToday()">이번달</button>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="vtoggle" id="rt-vtoggle">
+        <button data-v="list" onclick="state.ui.rtView='list';save();render()">목록</button>
+        <button data-v="report" onclick="state.ui.rtView='report';save();render()">Report</button>
+      </div>
+      <button class="today-btn" onclick="goToday()">이번달</button>
+    </div>
   </div>
   <div class="page" id="routine-list"></div>
 </div>
@@ -305,9 +335,17 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
       <div class="mtitle" id="nv-title"></div>
       <button class="icon-btn" onclick="moveMonth(1)">›</button>
     </div>
-    <button class="today-btn" onclick="goToday()">이번달</button>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="vtoggle" id="nv-vtoggle">
+        <button data-v="list" onclick="state.ui.nvView='list';save();render()">목록</button>
+        <button data-v="report" onclick="state.ui.nvView='report';save();render()">Report</button>
+      </div>
+      <button class="today-btn" onclick="goToday()">이번달</button>
+    </div>
   </div>
   <div class="page">
+    <div id="novel-report" class="hidden"></div>
+    <div id="novel-normal">
     <div id="novel-summary"></div>
     <div class="grp-hd" style="display:flex;justify-content:space-between;align-items:center">작업 기록
       <span id="nv-log-toggle"></span></div>
@@ -316,6 +354,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
     <div class="sec-title" style="display:flex;justify-content:space-between;align-items:center">작품
       <button style="color:var(--accent);font-size:13px;font-weight:600" onclick="openWorkModal()">＋ 새 작품</button></div>
     <div id="work-list"></div>
+    </div>
   </div>
 </div>
 
@@ -420,14 +459,14 @@ function load(){
       Object.keys(DEF_CAT_ICONS).forEach(k=>{ if(s.categories.includes(k)&&!s.catIcons[k]) s.catIcons[k]=DEF_CAT_ICONS[k]; });
       s.moviePlaces = s.moviePlaces||['CGV','롯데시네마','메가박스','OTT','기타'];
       s.ottList = s.ottList||['넷플릭스','디즈니+','티빙','웨이브','쿠팡플레이','왓챠','라프텔','기타'];
-      s.ui = Object.assign({rvView:'list', rvSort:'dateDesc', rvStars:[], rvYear:'', nvLogView:'cal', calView:'week'}, s.ui||{});
+      s.ui = Object.assign({rvView:'list', rvSort:'dateDesc', rvStars:[], rvYear:'', nvLogView:'cal', calView:'week', rtView:'list', nvView:'list'}, s.ui||{});
       return s;
     }
   }catch(e){}
   return { schedules:[], routines:[], groups:[], reviews:[], categories:[...DEFAULT_CATS], catIcons:{...DEF_CAT_ICONS}, schedTags:['LOL'],
     moviePlaces:['CGV','롯데시네마','메가박스','OTT','기타'],
     ottList:['넷플릭스','디즈니+','티빙','웨이브','쿠팡플레이','왓챠','라프텔','기타'],
-    ui:{rvView:'list', rvSort:'dateDesc', rvStars:[], rvYear:'', nvLogView:'cal', calView:'week'},
+    ui:{rvView:'list', rvSort:'dateDesc', rvStars:[], rvYear:'', nvLogView:'cal', calView:'week', rtView:'list', nvView:'list'},
     works:[], worklogs:[], novelGoal:{perWeek:5, monthlyChars:0},
     filters:{sched:true,todo:true,routine:true,review:true, novel:true, jpHol:true, krHol:true, gcal:true, holDefaultsV2:1, todoSchedV1:1, exSchedTypes:[], exSchedTags:[], exRoutines:[], exCats:[]} };
 }
@@ -602,8 +641,8 @@ function toggleEx(key,val){
 function dayItems(ds){
   const f=state.filters, out={scheds:[],routines:[],reviews:[],novel:[]};
   if(f.todo) out.scheds = state.schedules.filter(s=>!f.exSchedTypes.includes(s.type)&&!(s.tag&&f.exSchedTags.includes(s.tag))&&schedOccursOn(s,ds));
-  if(f.routine) out.routines = state.routines.filter(r=>!f.exRoutines.includes(r.id)&&(routineGoalOn(r,ds)||r.checks[ds]||(r.recur.freq==='flex'&&ds<=todayStr()&&ds>=r.startDate&&ds<=(r.endDate||'9999-12-31'))));
-  if(f.review) out.reviews = state.reviews.filter(rv=>!rv.fromScheduleId&&!f.exCats.includes(rv.category)&&reviewOn(rv,ds)); // 투두 연동 후기는 캘린더에서 숨김(투두가 대신 표시)
+  if(f.routine) out.routines = state.routines.filter(r=>!f.exRoutines.includes(r.id)&&(routineGoalOn(r,ds)||r.checks[ds]||(r.recur.freq==='flex'&&ds>=r.startDate&&ds<=(r.endDate||'9999-12-31'))));
+  if(f.review) out.reviews = state.reviews.filter(rv=>!rv.noDate&&!rv.fromScheduleId&&!f.exCats.includes(rv.category)&&reviewOn(rv,ds)); // 투두 연동·기록보관 후기는 캘린더에서 숨김
   out.pubs=[];
   state.works.forEach(w=>{
     if(f.novel) w.episodes.forEach(e=>{ if(e.date===ds) out.novel.push({wid:w.id, t:w.title+' '+e.ep+'화', sub:'회차 업로드'}); });
@@ -969,9 +1008,71 @@ function rateFor(r,y,m){
   const pct = expected>0 ? Math.min(100,Math.round(done/expected*100)) : (done>0?100:null);
   return {done,expected,pct};
 }
+/* ----- 루틴 Report ----- */
+function routineActiveIn(r,y,m){
+  const ms=fmt(new Date(y,m,1)), me=fmt(new Date(y,m+1,0));
+  return r.startDate<=me && (r.endDate||'9999-12-31')>=ms;
+}
+function renderRoutineReport(el){
+  const y=view.y, m=view.m;
+  const acts=state.routines.filter(r=>routineActiveIn(r,y,m));
+  if(!acts.length && !(state.novelGoal.perWeek>0)){
+    el.innerHTML='<div class="empty">이 달에 진행한 루틴이 없어요</div>'; return;
+  }
+  const rates=acts.map(r=>({r, rate:rateFor(r,y,m)}));
+  const valid=rates.filter(x=>x.rate.pct!==null);
+  const avgPct=valid.length?Math.round(valid.reduce((a,x)=>a+x.rate.pct,0)/valid.length):null;
+  const totalChecks=rates.reduce((a,x)=>a+x.rate.done,0);
+
+  const cards=`<div class="stat-cards">
+    <div class="stat-card"><div class="v">${avgPct!==null?avgPct+'%':'–'}</div><div class="k">평균 달성률</div></div>
+    <div class="stat-card"><div class="v">${totalChecks}</div><div class="k">총 체크</div></div>
+    <div class="stat-card"><div class="v">${acts.length}</div><div class="k">진행 루틴</div></div>
+  </div>`;
+
+  // 루틴별 달성률 (해당 월)
+  const rows=rates.sort((a,b)=>(b.rate.pct||0)-(a.rate.pct||0)).map(({r,rate})=>{
+    const pct=rate.pct??0;
+    return `<div class="hbar-row" onclick="openRoutineDetail('${r.id}')" style="cursor:pointer">
+      <span class="lbl">${r.icon} ${esc(r.name)}</span>
+      <div class="track"><div class="fill" style="width:${pct}%"></div></div>
+      <span class="val" style="width:70px">${rate.pct!==null?rate.pct+'%':'–'} <span style="font-size:10px">(${rate.done}/${rate.expected})</span></span>
+    </div>`;
+  }).join('');
+  let novelRow='';
+  if(state.novelGoal.perWeek>0){
+    const pace=novelPace(y,m), pct=pace.pct??0;
+    novelRow=`<div class="hbar-row" onclick="switchTab('novel')" style="cursor:pointer">
+      <span class="lbl">📖 웹소설 작업</span>
+      <div class="track"><div class="fill" style="width:${pct}%"></div></div>
+      <span class="val" style="width:70px">${pace.pct!==null?pace.pct+'%':'–'} <span style="font-size:10px">(${pace.done}/${pace.expected})</span></span>
+    </div>`;
+  }
+  const bySec=`<div class="stat-sec"><h3>${m+1}월 루틴별 달성률 <span class="hint">탭하면 상세로</span></h3>${rows+novelRow||'<div class="empty" style="padding:6px 0">루틴 없음</div>'}</div>`;
+
+  // 최근 6개월 평균 달성률 추이
+  let trendBars='';
+  for(let i=5;i>=0;i--){
+    const d=new Date(y,m-i,1), ty=d.getFullYear(), tm=d.getMonth();
+    const mActs=state.routines.filter(r=>routineActiveIn(r,ty,tm));
+    const mValid=mActs.map(r=>rateFor(r,ty,tm)).filter(x=>x.pct!==null);
+    const v=mValid.length?Math.round(mValid.reduce((a,x)=>a+x.pct,0)/mValid.length):0;
+    trendBars+=`<div class="vbar"><span class="cnt">${mValid.length?v+'%':''}</span><div class="bar" style="height:${Math.max(v?3:0,v)}%"></div><span>${tm+1}월</span></div>`;
+  }
+  const trend=`<div class="stat-sec"><h3>최근 6개월 평균 달성률</h3><div class="vbar-wrap">${trendBars}</div></div>`;
+
+  // 이번 달 개근·최다 체크
+  const best=valid.filter(x=>x.rate.pct>=100).map(x=>x.r.icon+' '+esc(x.r.name));
+  const bestSec=best.length?`<div class="stat-sec"><h3>이 달 100% 달성 🎉</h3><div style="font-size:13px;color:#C4CDC7;line-height:1.9">${best.join(' · ')}</div></div>`:'';
+
+  el.innerHTML=`<div class="report-rt" style="padding-top:4px">${cards+bySec+trend+bestSec}</div>`;
+}
 function renderRoutines(){
   document.getElementById('rt-title').textContent = monthLabel(view.y,view.m);
+  const tg=document.getElementById('rt-vtoggle');
+  if(tg) tg.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.v===(state.ui.rtView==='report'?'report':'list')));
   const el=document.getElementById('routine-list'), tds=todayStr();
+  if(state.ui.rtView==='report'){ renderRoutineReport(el); return; }
   let novelRow='';
   if(state.novelGoal.perWeek>0 && (state.works.length||state.worklogs.length)){
     const pace=novelPace(view.y,view.m);
@@ -1202,7 +1303,7 @@ function renderReviews(){
   const ui=state.ui;
   // 1) 뷰 전환 (최상단)
   document.getElementById('rv-viewseg').innerHTML=`<div class="seg" style="margin-top:14px">
-    ${['cal','list','album'].map(v=>`<button class="${ui.rvView===v?'on':''}" onclick="state.ui.rvView='${v}';save();renderReviews()">${v==='cal'?'Calendar':v==='list'?'List':'Album'}</button>`).join('')}
+    ${['cal','list','album','stats'].map(v=>`<button class="${ui.rvView===v?'on':''}" onclick="state.ui.rvView='${v}';save();renderReviews()">${v==='cal'?'Calendar':v==='list'?'List':v==='album'?'Album':'Report'}</button>`).join('')}
   </div>`;
   // 2) 카테고리 선택
   const chips=document.getElementById('rv-cat-chips');
@@ -1221,6 +1322,8 @@ function renderReviews(){
       </div>
       <button class="today-btn" onclick="goToday()">이번달</button>
     </div>`;
+  } else if(ui.rvView==='stats'){
+    sub.innerHTML='<div style="padding-top:4px"></div>';
   } else {
     sub.innerHTML=`<div style="display:flex;gap:8px;align-items:center;justify-content:flex-end;padding:8px 0 10px">
       <button style="${iconBtn(false)}" aria-label="정렬" onclick="openRvSortSheet()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16"/><path d="M4 7l3-3 3 3"/><path d="M17 20V4"/><path d="M14 17l3 3 3-3"/></svg></button>
@@ -1228,6 +1331,7 @@ function renderReviews(){
     </div>`;
   }
   const list=document.getElementById('review-list');
+  if(ui.rvView==='stats'){ renderReviewStats(list); return; }
   let arr=state.reviews.filter(rvMatch);
   if(ui.rvSort==='ratingDesc') arr.sort((a,b)=>((b.rating||0)-(a.rating||0))||b.date.localeCompare(a.date));
   else if(ui.rvSort==='ratingAsc') arr.sort((a,b)=>((a.rating||0)-(b.rating||0))||b.date.localeCompare(a.date));
@@ -1247,7 +1351,7 @@ function renderReviews(){
     ${r.img?`<img class="rv-thumb" src="${esc(r.img)}" referrerpolicy="no-referrer" onerror="this.style.display='none'">`:''}
     <div class="rv-body">
       <div style="display:flex;gap:8px;align-items:center"><span class="rv-cat">${catLabel(r.category)}</span>${r.round>1?`<span class="rv-cat" style="color:var(--sub)">${r.round}차</span>`:''}<span class="rv-title">${esc(r.title)}</span></div>
-      <div class="rv-date">${r.date}${r.endDate&&r.endDate!==r.date?' ~ '+r.endDate:''}${r.place?' · '+esc(r.place)+(r.ott?' ('+esc(r.ott)+')':'')+(r.seat?' '+esc(r.seat):''):''}${r.fromScheduleId?' · 스케줄 연동':''}</div>
+      <div class="rv-date">${r.noDate?'기록':(r.date+(r.endDate&&r.endDate!==r.date?' ~ '+r.endDate:''))}${r.place?' · '+esc(r.place)+(r.ott?' ('+esc(r.ott)+')':'')+(r.seat?' '+esc(r.seat):''):''}${r.fromScheduleId?' · 스케줄 연동':''}</div>
       ${r.rating?`<div class="rv-stars">${starStr(r.rating)} <span style="color:var(--sub);font-size:11px;letter-spacing:0">${r.rating.toFixed(1)}</span></div>`:''}
       ${r.text?`<div class="rv-text">${esc(r.text)}</div>`:''}
     </div></div>`).join('');
@@ -1255,7 +1359,7 @@ function renderReviews(){
 /* ----- 후기 캘린더뷰 (포스터) ----- */
 function renderReviewCal(container, arr){
   const byDate={};
-  arr.forEach(r=>{ (byDate[r.date]=byDate[r.date]||[]).push(r); });
+  arr.forEach(r=>{ if(r.noDate) return; (byDate[r.date]=byDate[r.date]||[]).push(r); });
   const first=new Date(view.y,view.m,1);
   const start=new Date(first); start.setDate(1-monIdx(first));
   let cells='';
@@ -1265,7 +1369,7 @@ function renderReviewCal(container, arr){
     const ds=fmt(d), other=d.getMonth()!==view.m;
     const rs=byDate[ds]||[];
     const r0=rs[0];
-    cells+=`<div class="rvc-cell ${other?'other':''}" ${rs.length?`onclick="openRvCalDay('${ds}')"`:''}>
+    cells+=`<div class="rvc-cell ${other?'other':''}" onclick="${rs.length?`openRvCalDay('${ds}')`:`openReviewModal(null,{date:'${ds}'})`}">
       ${r0?(r0.img?`<img src="${esc(r0.img)}" referrerpolicy="no-referrer">`:(state.catIcons[r0.category]||'☆')):''}
       <span class="rvc-day">${d.getDate()}</span>
       ${rs.length>1?`<span class="rvc-more">+${rs.length-1}</span>`:''}
@@ -1276,6 +1380,82 @@ function renderReviewCal(container, arr){
     <div class="rvc-grid">${cells}</div>
     <div style="font-size:11px;color:var(--sub);margin-top:10px">후기 시작일 기준으로 표시돼요. 셀을 탭하면 후기가 열려요.</div>`;
 }
+/* ----- 통계 대시보드 (Stats 뷰) ----- */
+let statsYear='all';
+function renderReviewStats(container){
+  const base=state.reviews.filter(r=>!rvCatFilter||r.category===rvCatFilter);
+  if(!base.length){ container.innerHTML='<div class="empty">아직 기록이 없어요.<br>기록이 쌓이면 통계가 여기 나타나요.</div>'; return; }
+  const years=[...new Set(base.filter(r=>!r.noDate).map(r=>r.date.slice(0,4)))].sort().reverse();
+  if(statsYear!=='all'&&!years.includes(statsYear)) statsYear='all';
+  const arr = statsYear==='all' ? base : base.filter(r=>!r.noDate&&r.date.slice(0,4)===statsYear);
+  const rated=arr.filter(r=>r.rating>0);
+  const avg=rated.length?rated.reduce((a,r)=>a+r.rating,0)/rated.length:0;
+  const rewatch=arr.filter(r=>(r.round||1)>1).length;
+
+  // 연도 선택 칩
+  const yearChips=`<div class="year-chips">
+    <button class="cchip ${statsYear==='all'?'on':''}" onclick="statsYear='all';renderReviews()">전체</button>
+    ${years.map(y=>`<button class="cchip ${statsYear===y?'on':''}" onclick="statsYear='${y}';renderReviews()">${y}년</button>`).join('')}
+  </div>`;
+
+  // 요약 카드
+  const cards=`<div class="stat-cards">
+    <div class="stat-card"><div class="v">${arr.length}</div><div class="k">기록</div></div>
+    <div class="stat-card"><div class="v">${avg?avg.toFixed(1):'–'}</div><div class="k">평균 별점</div></div>
+    <div class="stat-card"><div class="v">${rewatch}</div><div class="k">N차 관람</div></div>
+  </div>`;
+
+  // 추이: 전체=연도별(+보관 기록), 연도 선택=월별
+  let trend='';
+  if(statsYear==='all'){
+    const byY={}; base.forEach(r=>{ const k=r.noDate?'기록':r.date.slice(0,4); byY[k]=(byY[k]||0)+1; });
+    const keys=Object.keys(byY).filter(k=>k!=='기록').sort(); if(byY['기록']) keys.push('기록');
+    const mx=Math.max(1,...keys.map(k=>byY[k]));
+    trend=`<div class="stat-sec"><h3>연도별 기록 <span class="hint">막대를 탭하면 그 해로 이동</span></h3><div class="vbar-wrap">
+      ${keys.map(k=>`<div class="vbar" ${k!=='기록'?`onclick="statsYear='${k}';renderReviews()"`:''}>
+        <span class="cnt">${byY[k]}</span><div class="bar" style="height:${Math.max(3,Math.round(byY[k]/mx*100))}%"></div><span>${k==='기록'?'보관':"'"+k.slice(2)}</span></div>`).join('')}
+    </div></div>`;
+  } else {
+    const byM=Array(12).fill(0); arr.forEach(r=>{ byM[+r.date.slice(5,7)-1]++; });
+    const mx=Math.max(1,...byM);
+    trend=`<div class="stat-sec"><h3>${statsYear}년 월별 기록</h3><div class="vbar-wrap">
+      ${byM.map((v,i)=>`<div class="vbar"><span class="cnt">${v||''}</span><div class="bar" style="height:${v?Math.max(3,Math.round(v/mx*100)):0}%"></div><span>${i+1}</span></div>`).join('')}
+    </div></div>`;
+  }
+
+  // 카테고리 분포
+  const byC={}; arr.forEach(r=>{ byC[r.category]=(byC[r.category]||0)+1; });
+  const cKeys=Object.keys(byC).sort((a,b)=>byC[b]-byC[a]);
+  const cMax=Math.max(1,...cKeys.map(k=>byC[k]));
+  const catSec = cKeys.length ? `<div class="stat-sec"><h3>카테고리</h3>
+    ${cKeys.map(k=>`<div class="hbar-row"><span class="lbl">${catLabel(k)}</span><div class="track"><div class="fill" style="width:${Math.round(byC[k]/cMax*100)}%"></div></div><span class="val">${byC[k]}</span></div>`).join('')}
+  </div>` : '';
+
+  // 별점 분포
+  const starVals=[5,4.5,4,3.5,3,2.5,2,1.5,1,0.5];
+  const byS={}; rated.forEach(r=>{ byS[r.rating]=(byS[r.rating]||0)+1; });
+  const sMax=Math.max(1,...starVals.map(s=>byS[s]||0));
+  const starSec = rated.length ? `<div class="stat-sec"><h3>별점 분포 <span class="hint">${rated.length}건 평가</span></h3>
+    ${starVals.filter(s=>byS[s]).map(s=>`<div class="hbar-row"><span class="lbl" style="letter-spacing:-1px;color:var(--review)">${starStr(s)}</span><div class="track"><div class="fill" style="width:${Math.round(byS[s]/sMax*100)}%"></div></div><span class="val">${byS[s]}</span></div>`).join('')}
+  </div>` : '';
+
+  // 다시 본 작품 TOP 5 (같은 제목 기록 수 기준)
+  const byT={}; arr.forEach(r=>{ const k=r.title.trim(); byT[k]=(byT[k]||0)+1; });
+  const tops=Object.entries(byT).filter(([,c])=>c>1).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const topSec = tops.length ? `<div class="stat-sec"><h3>다시 본 작품 TOP</h3>
+    ${tops.map(([t,c],i)=>`<div class="hbar-row"><span class="lbl">${i+1}. ${esc(t)}</span><div class="track"><div class="fill" style="width:${Math.round(c/tops[0][1]*100)}%"></div></div><span class="val">${c}회</span></div>`).join('')}
+  </div>` : '';
+
+  // 본 곳 분포 (극장/OTT 등, 입력된 것만)
+  const byP={}; arr.forEach(r=>{ if(r.place){ const k=r.place==='OTT'&&r.ott?r.ott:r.place; byP[k]=(byP[k]||0)+1; } });
+  const pKeys=Object.keys(byP).sort((a,b)=>byP[b]-byP[a]).slice(0,6);
+  const pMax=Math.max(1,...pKeys.map(k=>byP[k]));
+  const placeSec = pKeys.length ? `<div class="stat-sec"><h3>어디서 봤나</h3>
+    ${pKeys.map(k=>`<div class="hbar-row"><span class="lbl">${esc(k)}</span><div class="track"><div class="fill" style="width:${Math.round(byP[k]/pMax*100)}%"></div></div><span class="val">${byP[k]}</span></div>`).join('')}
+  </div>` : '';
+
+  container.innerHTML = yearChips + cards + trend + catSec + starSec + topSec + placeSec;
+}
 function openRvCalDay(ds){
   const arr=state.reviews.filter(r=>r.date===ds&&rvMatch(r));
   if(arr.length===1){ openReviewModal(arr[0].id); return; }
@@ -1283,7 +1463,7 @@ function openRvCalDay(ds){
     <span class="ds-badge" style="background:var(--review)"></span>
     <div class="ds-main"><div class="ds-title">${r.round>1?r.round+'차 · ':''}${esc(r.title)}</div>
     <div class="ds-sub">${catLabel(r.category)}${r.rating?' · '+starStr(r.rating):''}</div></div>
-  </div>`).join(''));
+  </div>`).join('')+`<button class="btn ghost" style="margin-top:14px" onclick="openReviewModal(null,{date:'${ds}'})">＋ 이 날짜에 기록 추가</button>`);
 }
 
 let rvDraft=null;
@@ -1291,7 +1471,7 @@ function openReviewModal(id, preset, unified){
   unifiedAdd=!!unified;
   const r=id?state.reviews.find(x=>x.id===id):null;
   rvDraft=r?JSON.parse(JSON.stringify(r)):
-    Object.assign({id:null,title:'',category:state.categories[0],date:todayStr(),endDate:'',rating:0,text:'',img:'',place:'',seat:'',ott:'',round:1,fromScheduleId:''}, preset||{});
+    Object.assign({id:null,title:'',category:state.categories[0],date:todayStr(),endDate:'',rating:0,text:'',img:'',place:'',seat:'',ott:'',round:1,fromScheduleId:'',noDate:false}, preset||{});
   if(!rvDraft.round) rvDraft.round=1;
   renderReviewModal();
 }
@@ -1414,10 +1594,17 @@ function renderReviewModal(){
         <button class="mini-act" style="flex-shrink:0" onclick="searchInfo()">정보 검색</button>
       </div></div>
     ${linkUI}
-    <div class="frow-2">
+    <div class="frow" style="background:var(--chip);border-radius:11px;padding:12px 14px">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin:0">
+        <input type="checkbox" ${d.noDate?'checked':''} onchange="rvDraft.noDate=this.checked;renderReviewModal()" style="width:18px;height:18px;flex-shrink:0">
+        <span style="font-weight:600">기록만 남기기 (날짜 없이)</span>
+      </label>
+      <div style="font-size:11px;color:var(--sub);margin-top:6px;line-height:1.5">예전에 본 것을 아카이브할 때 켜세요. 캘린더에는 안 뜨고 리스트·앨범에서만 보여요.</div>
+    </div>
+    ${d.noDate?'':`<div class="frow-2">
       <div class="frow"><label>시작일 *</label><input type="date" value="${d.date}" onchange="rvDraft.date=this.value"></div>
       <div class="frow"><label>종료일 (선택)</label><input type="date" value="${d.endDate||''}" onchange="rvDraft.endDate=this.value"></div>
-    </div>
+    </div>`}
     <div class="frow"><label>관람 회차</label><input type="number" min="1" value="${d.round||1}" onchange="rvDraft.round=Math.max(1,+this.value||1)"> </div>
     ${placeUI(d)}
     <div class="frow"><label>포스터 이미지 (선택)</label>
@@ -1437,6 +1624,10 @@ function renderReviewModal(){
     </div>
     <div class="frow"><label>별점 (선택) — 별 왼쪽/오른쪽 탭으로 반개 조절</label><div class="stars-input">${stars}</div></div>
     <div class="frow"><label>리뷰 (선택)</label><textarea rows="4" placeholder="감상을 남겨보세요" oninput="rvDraft.text=this.value">${esc(d.text)}</textarea></div>
+    ${d.info?`<div class="frow"><label style="display:flex;justify-content:space-between;align-items:center">가져온 정보 (줄거리·소개 등)
+      <button style="color:var(--danger);font-size:11.5px;font-weight:600" onclick="rvDraft.info='';renderReviewModal()">전체 삭제</button></label>
+      <textarea rows="5" placeholder="검색으로 가져온 정보예요. 직접 수정할 수 있어요." oninput="rvDraft.info=this.value">${esc(d.info)}</textarea>
+      <div style="font-size:10.5px;color:var(--sub);margin-top:6px">상세 화면 맨 아래에 표시돼요.</div></div>`:''}
     <button class="btn" onclick="saveReview()">저장</button>
     ${d.id?`<button class="btn ghost" onclick="addNthView()">＋ ${(d.round||1)+1}차 관람 추가</button><button class="btn del" onclick="deleteReview()">삭제</button>`:''}
   `);
@@ -1475,7 +1666,7 @@ async function runSearch(append){
     const j=await r.json();
     const items=(j.items||[]).map(it=>({
       title:deEnt(it.title), img:(it.img||'').replace(/^http:\/\//,'https://'),
-      date:it.date||'', sub:deEnt(it.sub||'')
+      date:it.date||'', sub:deEnt(it.sub||''), info:deEnt(it.info||'')
     }));
     searchHasMore = (typeof j.hasMore==='boolean') ? j.hasMore : items.length>=10;
     searchItems = append ? searchItems.concat(items) : items;
@@ -1501,6 +1692,7 @@ function pickInfo(i){
   const it=searchItems[i]; if(!it) return;
   rvDraft.title=it.title;
   if(it.img) rvDraft.img=it.img;
+  if(it.info) rvDraft.info=it.info;
   if(/^\d{4}-\d{2}-\d{2}$/.test(it.date)&&it.date<=todayStr()) rvDraft.date=it.date;
   renderReviewModal();
 }
@@ -1543,7 +1735,8 @@ function saveCat(){
 function saveReview(){
   const d=rvDraft;
   if(!d.title.trim()) return alert('제목을 입력해주세요');
-  if(d.endDate&&d.endDate<d.date) return alert('종료일이 시작일보다 빨라요');
+  if(d.noDate){ d.date='1000-01-01'; d.endDate=''; }
+  else if(d.endDate&&d.endDate<d.date) return alert('종료일이 시작일보다 빨라요');
   if(d.id){ const i=state.reviews.findIndex(x=>x.id===d.id); state.reviews[i]=d; }
   else { d.id=uid(); state.reviews.push(d); }
   save(); closeSheet();
@@ -1571,8 +1764,69 @@ function novelPace(y,m){
   const vr={recur:{freq:'flex',perWeek:state.novelGoal.perWeek},startDate:'2000-01-01',checks:novelChecks()};
   return rateFor(vr,y,m);
 }
+/* ----- 노블 Report ----- */
+function fmtChars(v){ return v>=10000 ? (Math.round(v/1000)/10)+'만' : nf(v); }
+function renderNovelReport(el){
+  const y=view.y, m=view.m;
+  if(!state.worklogs.length){ el.innerHTML='<div class="empty">아직 작업 기록이 없어요.<br>기록이 쌓이면 리포트가 여기 나타나요.</div>'; return; }
+  const st=novelMonthStats(y,m);
+  const dayAvg=st.workDays?Math.round(st.total/st.workDays):0;
+
+  const cards=`<div class="stat-cards">
+    <div class="stat-card"><div class="v">${fmtChars(st.total)}</div><div class="k">이달 글자수</div></div>
+    <div class="stat-card"><div class="v">${st.workDays}일</div><div class="k">작업일</div></div>
+    <div class="stat-card"><div class="v">${fmtChars(dayAvg)}</div><div class="k">일평균</div></div>
+  </div>`;
+
+  // 최근 6개월 글자수 추이
+  let trendBars='';
+  for(let i=5;i>=0;i--){
+    const d=new Date(y,m-i,1), ts=novelMonthStats(d.getFullYear(),d.getMonth());
+    const vals=[];
+    for(let j=5;j>=0;j--){ const dd=new Date(y,m-j,1); vals.push(novelMonthStats(dd.getFullYear(),dd.getMonth()).total); }
+    const mx=Math.max(1,...vals);
+    trendBars+=`<div class="vbar"><span class="cnt">${ts.total?fmtChars(ts.total):''}</span><div class="bar" style="height:${ts.total?Math.max(3,Math.round(ts.total/mx*100)):0}%"></div><span>${d.getMonth()+1}월</span></div>`;
+  }
+  const trend=`<div class="stat-sec"><h3>최근 6개월 글자수</h3><div class="vbar-wrap">${trendBars}</div></div>`;
+
+  // 작품별 글자수 (해당 월)
+  const wKeys=Object.keys(st.byWork).sort((a,b)=>st.byWork[b]-st.byWork[a]);
+  const wMax=Math.max(1,...wKeys.map(k=>st.byWork[k]));
+  const workSec=wKeys.length?`<div class="stat-sec"><h3>${m+1}월 작품별 글자수</h3>
+    ${wKeys.map(k=>{const w=state.works.find(x=>x.id===k);
+      return `<div class="hbar-row" ${w?`onclick="openWorkDetail('${w.id}')" style="cursor:pointer"`:''}>
+        <span class="lbl">${w?esc(w.title):'(삭제된 작품)'}</span>
+        <div class="track"><div class="fill" style="width:${Math.round(st.byWork[k]/wMax*100)}%"></div></div>
+        <span class="val" style="width:52px">${fmtChars(st.byWork[k])}</span></div>`;}).join('')}
+  </div>`:'';
+
+  // 작업 종류별 (해당 월, 글자수 기준 + 건수)
+  const ms=fmt(new Date(y,m,1)), me=fmt(new Date(y,m+1,0));
+  const mLogs=state.worklogs.filter(l=>l.date>=ms&&l.date<=me);
+  const byK={}; mLogs.forEach(l=>{ const k=l.kind||'etc'; byK[k]=byK[k]||{chars:0,cnt:0}; byK[k].chars+=(+l.chars||0); byK[k].cnt++; });
+  const kKeys=Object.keys(byK).sort((a,b)=>byK[b].chars-byK[a].chars);
+  const kMax=Math.max(1,...kKeys.map(k=>byK[k].chars));
+  const kindSec=kKeys.length?`<div class="stat-sec"><h3>${m+1}월 작업 종류</h3>
+    ${kKeys.map(k=>`<div class="hbar-row"><span class="lbl">${LOG_KINDS[k]||'기타'}</span>
+      <div class="track"><div class="fill" style="width:${byK[k].chars?Math.round(byK[k].chars/kMax*100):3}%"></div></div>
+      <span class="val" style="width:70px">${fmtChars(byK[k].chars)} <span style="font-size:10px">(${byK[k].cnt}건)</span></span></div>`).join('')}
+  </div>`:'';
+
+  // 올해 누적
+  const ys=fmt(new Date(y,0,1)), ye=fmt(new Date(y,11,31));
+  const yearTotal=state.worklogs.filter(l=>l.date>=ys&&l.date<=ye).reduce((a,l)=>a+(+l.chars||0),0);
+  const yearSec=`<div class="stat-sec"><h3>${y}년 누적</h3><div style="font-size:13px;color:#C4CDC7">올해 총 <b style="color:var(--novel);font-size:16px">${nf(yearTotal)}</b>자를 썼어요.</div></div>`;
+
+  el.innerHTML=`<div class="report-nv" style="padding-top:4px">${cards+trend+workSec+kindSec+yearSec}</div>`;
+}
 function renderNovel(){
   document.getElementById('nv-title').textContent = monthLabel(view.y,view.m);
+  const tg=document.getElementById('nv-vtoggle');
+  if(tg) tg.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.v===(state.ui.nvView==='report'?'report':'list')));
+  const isReport = state.ui.nvView==='report';
+  document.getElementById('novel-report').classList.toggle('hidden', !isReport);
+  document.getElementById('novel-normal').classList.toggle('hidden', isReport);
+  if(isReport){ renderNovelReport(document.getElementById('novel-report')); return; }
   const st=novelMonthStats(view.y,view.m), goal=state.novelGoal, pace=novelPace(view.y,view.m);
   const pct = goal.monthlyChars>0 ? Math.min(100,Math.round(st.total/goal.monthlyChars*100)) : null;
   document.getElementById('novel-summary').innerHTML=`
@@ -1691,26 +1945,73 @@ function deleteWork(){
 function openWorkDetail(id){
   const w=state.works.find(x=>x.id===id); if(!w) return;
   const eps=[...w.episodes].sort((a,b)=>b.ep-a.ep);
-  const pubs=[...(w.pubs||[])].sort((a,b)=>a.date.localeCompare(b.date));
+  const pubs=[...(w.pubs||[])].sort((a,b)=>b.date.localeCompare(a.date));
   const proofs=state.schedules.filter(s=>s.workId===id);
+  const EP_PREVIEW=8, PUB_PREVIEW=6;
   openSheet(esc(w.title), `
     <div style="display:flex;gap:8px;margin-bottom:16px">
       <span class="status-badge st-${w.status}">${WORK_STATUS[w.status]}</span>
       <button class="mini-act" style="margin-left:auto" onclick="openWorkModal('${w.id}')">작품 수정</button>
     </div>
     ${w.memo?`<div class="card" style="font-size:13px;color:#C4CDC7;white-space:pre-wrap;line-height:1.6">${esc(w.memo)}</div>`:''}
-    <div class="sec-title" style="display:flex;justify-content:space-between">업로드 예약
-      <button style="color:var(--accent);font-size:12.5px;font-weight:600" onclick="openEpModal('${w.id}')">＋ 예약 추가</button></div>
-    <div class="card">${eps.length?eps.slice(0,10).map(e=>`<div class="log-row"><b>${e.ep}화</b><span style="flex:1;margin-left:12px;color:var(--sub)">${e.date} (${DAY_LABEL[monIdx(parse(e.date))]})</span>
-      <button style="color:var(--danger);font-size:12px" onclick="deleteEp('${w.id}',${e.ep})">삭제</button></div>`).join('')+(eps.length>10?`<div style="font-size:11.5px;color:var(--sub);padding-top:8px">외 ${eps.length-10}건</div>`:''):'<div class="empty" style="padding:10px 0">예약 없음</div>'}</div>
-    <div class="sec-title" style="display:flex;justify-content:space-between">출간 일정
-      <button style="color:var(--accent);font-size:12.5px;font-weight:600" onclick="addPub('${w.id}')">＋ 출간 추가</button></div>
-    <div class="card">${pubs.length?pubs.map((p,i)=>`<div class="log-row"><b>${esc(p.label||'출간')}</b><span style="flex:1;margin-left:12px;color:var(--sub)">${p.date}</span>
-      <button style="color:var(--danger);font-size:12px" onclick="deletePub('${w.id}',${i})">삭제</button></div>`).join(''):'<div class="empty" style="padding:10px 0">출간 일정 없음</div>'}</div>
+    <div class="sec-title" style="display:flex;justify-content:space-between;align-items:center">업로드 예약 ${eps.length?`<span style="color:var(--sub);font-weight:500;font-size:12px">(${eps.length})</span>`:''}
+      <span style="margin-left:auto;display:flex;gap:12px">
+        ${eps.length>EP_PREVIEW?`<button style="color:var(--accent);font-size:12.5px;font-weight:600" onclick="openEpManager('${w.id}')">전체 관리</button>`:''}
+        <button style="color:var(--accent);font-size:12.5px;font-weight:600" onclick="openEpModal('${w.id}')">＋ 예약 추가</button></span></div>
+    <div class="card">${eps.length?eps.slice(0,EP_PREVIEW).map(e=>`<div class="log-row"><b>${e.ep}화</b><span style="flex:1;margin-left:12px;color:var(--sub)">${e.date} (${DAY_LABEL[monIdx(parse(e.date))]})</span>
+      <button style="color:var(--danger);font-size:12px" onclick="deleteEp('${w.id}',${e.ep})">삭제</button></div>`).join('')+(eps.length>EP_PREVIEW?`<button class="btn ghost" style="margin-top:10px" onclick="openEpManager('${w.id}')">전체 ${eps.length}화 보기 →</button>`:''):'<div class="empty" style="padding:10px 0">예약 없음</div>'}</div>
+    <div class="sec-title" style="display:flex;justify-content:space-between">출간 일정 ${pubs.length?`<span style="color:var(--sub);font-weight:500;font-size:12px">(${pubs.length})</span>`:''}
+      <button style="color:var(--accent);font-size:12.5px;font-weight:600;margin-left:auto" onclick="addPub('${w.id}')">＋ 출간 추가</button></div>
+    <div class="card">${pubs.length?pubs.slice(0,PUB_PREVIEW).map(p=>`<div class="log-row"><b>${esc(p.label||'출간')}</b><span style="flex:1;margin-left:12px;color:var(--sub)">${p.date}</span>
+      <button style="color:var(--danger);font-size:12px" onclick="deletePub('${w.id}','${esc(p.date)}','${esc(p.label||'')}')">삭제</button></div>`).join('')+(pubs.length>PUB_PREVIEW?`<button class="btn ghost" style="margin-top:10px" onclick="openPubManager('${w.id}')">전체 ${pubs.length}건 보기 →</button>`:''):'<div class="empty" style="padding:10px 0">출간 일정 없음</div>'}</div>
     <div class="sec-title" style="display:flex;justify-content:space-between">교정 일정
       <button style="color:var(--accent);font-size:12.5px;font-weight:600" onclick="addProof('${w.id}')">＋ 교정 추가</button></div>
     <div class="card">${proofs.length?proofs.map(s=>`<div class="log-row"><b>${esc(s.title)}</b><span style="flex:1;margin-left:12px;color:var(--sub)">${s.date}${s.endDate?' ~ '+s.endDate:''}</span>
       <button style="color:var(--sub);font-size:12px" onclick="closeSheet();openScheduleModal('${s.id}')">수정</button></div>`).join(''):'<div class="empty" style="padding:10px 0">교정 일정 없음</div>'}</div>
+  `);
+}
+/* ----- 전체 회차 관리 (페이징) ----- */
+let epMgr={wid:null, page:0, per:20};
+function openEpManager(wid){ epMgr={wid, page:0, per:20}; renderEpManager(); }
+function renderEpManager(){
+  const w=state.works.find(x=>x.id===epMgr.wid); if(!w) return;
+  const eps=[...w.episodes].sort((a,b)=>b.ep-a.ep);
+  const total=eps.length, pages=Math.max(1,Math.ceil(total/epMgr.per));
+  if(epMgr.page>=pages) epMgr.page=pages-1;
+  const from=epMgr.page*epMgr.per, slice=eps.slice(from, from+epMgr.per);
+  const pager=pages>1?`<div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-top:14px">
+    <button class="mini-act" ${epMgr.page===0?'disabled style=opacity:.35':''} onclick="epMgr.page--;renderEpManager()">‹ 이전</button>
+    <span style="font-size:12.5px;color:var(--sub)">${epMgr.page+1} / ${pages}</span>
+    <button class="mini-act" ${epMgr.page>=pages-1?'disabled style=opacity:.35':''} onclick="epMgr.page++;renderEpManager()">다음 ›</button>
+  </div>`:'';
+  openSheet(`${esc(w.title)} · 전체 회차 (${total})`, `
+    <button class="btn ghost" style="margin-bottom:12px" onclick="openEpModal('${w.id}')">＋ 예약 추가</button>
+    <div class="card">${slice.map(e=>`<div class="log-row"><b>${e.ep}화</b><span style="flex:1;margin-left:12px;color:var(--sub)">${e.date} (${DAY_LABEL[monIdx(parse(e.date))]})</span>
+      <button style="color:var(--danger);font-size:12px" onclick="deleteEp('${w.id}',${e.ep},true)">삭제</button></div>`).join('')}</div>
+    ${pager}
+    <button class="btn ghost" style="margin-top:16px" onclick="openWorkDetail('${w.id}')">← 작품으로 돌아가기</button>
+  `);
+}
+/* ----- 전체 출간 관리 (페이징) ----- */
+let pubMgr={wid:null, page:0, per:20};
+function openPubManager(wid){ pubMgr={wid, page:0, per:20}; renderPubManager(); }
+function renderPubManager(){
+  const w=state.works.find(x=>x.id===pubMgr.wid); if(!w) return;
+  const pubs=[...(w.pubs||[])].sort((a,b)=>b.date.localeCompare(a.date));
+  const total=pubs.length, pages=Math.max(1,Math.ceil(total/pubMgr.per));
+  if(pubMgr.page>=pages) pubMgr.page=pages-1;
+  const from=pubMgr.page*pubMgr.per, slice=pubs.slice(from, from+pubMgr.per);
+  const pager=pages>1?`<div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-top:14px">
+    <button class="mini-act" ${pubMgr.page===0?'disabled style=opacity:.35':''} onclick="pubMgr.page--;renderPubManager()">‹ 이전</button>
+    <span style="font-size:12.5px;color:var(--sub)">${pubMgr.page+1} / ${pages}</span>
+    <button class="mini-act" ${pubMgr.page>=pages-1?'disabled style=opacity:.35':''} onclick="pubMgr.page++;renderPubManager()">다음 ›</button>
+  </div>`:'';
+  openSheet(`${esc(w.title)} · 전체 출간 (${total})`, `
+    <button class="btn ghost" style="margin-bottom:12px" onclick="addPub('${w.id}')">＋ 출간 추가</button>
+    <div class="card">${slice.map(p=>`<div class="log-row"><b>${esc(p.label||'출간')}</b><span style="flex:1;margin-left:12px;color:var(--sub)">${p.date}</span>
+      <button style="color:var(--danger);font-size:12px" onclick="deletePub('${w.id}','${esc(p.date)}','${esc(p.label||'')}',true)">삭제</button></div>`).join('')}</div>
+    ${pager}
+    <button class="btn ghost" style="margin-top:16px" onclick="openWorkDetail('${w.id}')">← 작품으로 돌아가기</button>
   `);
 }
 /* ----- 회차 예약 (기간 + 주기) ----- */
@@ -1776,10 +2077,10 @@ function saveEps(){
   eps.forEach(e=>{ w.episodes=w.episodes.filter(x=>x.ep!==e.ep); w.episodes.push(e); });
   save(); closeSheet(); switchTab('novel');
 }
-function deleteEp(wid,ep){
+function deleteEp(wid,ep,fromMgr){
   const w=state.works.find(x=>x.id===wid);
   w.episodes=w.episodes.filter(x=>x.ep!==ep);
-  save(); openWorkDetail(wid);
+  save(); fromMgr?renderEpManager():openWorkDetail(wid);
 }
 /* ----- 출간/교정 ----- */
 let pubDraft=null;
@@ -1800,9 +2101,11 @@ function savePub(){
   w.pubs=w.pubs||[]; w.pubs.push({label:d.label.trim()||'출간', date:d.date});
   save(); openWorkDetail(d.wid);
 }
-function deletePub(wid,i){
+function deletePub(wid,date,label,fromMgr){
   const w=state.works.find(x=>x.id===wid);
-  w.pubs.splice(i,1); save(); openWorkDetail(wid);
+  const i=(w.pubs||[]).findIndex(p=>p.date===date&&(p.label||'')===(label||''));
+  if(i>=0) w.pubs.splice(i,1);
+  save(); fromMgr?renderPubManager():openWorkDetail(wid);
 }
 function addProof(wid){
   const w=state.works.find(x=>x.id===wid);
