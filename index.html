@@ -1595,7 +1595,13 @@ function rvLinkBlock(d){
   return `<button class="btn ghost" style="margin-bottom:14px" onclick="openRvLinkPicker()">🔗 기존 기록에 회차로 추가</button>`;
 }
 let rvLinkQuery='';
-function openRvLinkPicker(){ rvLinkQuery=''; renderRvLinkPicker(); }
+let rvLinkSearched=false;
+function openRvLinkPicker(){ rvLinkQuery=''; rvLinkSearched=false; renderRvLinkPicker(); }
+function runRvLinkSearch(){
+  rvLinkQuery=document.getElementById('rv-link-input').value;
+  rvLinkSearched=true;
+  renderRvLinkPicker();
+}
 function renderRvLinkPicker(){
   const q=rvLinkQuery.trim().toLowerCase();
   const seen=new Set(); const results=[];
@@ -1607,8 +1613,11 @@ function renderRvLinkPicker(){
     results.push(r);
   });
   openSheet('기존 기록에 회차로 추가', `
-    <div class="frow"><input placeholder="작품 제목 검색" value="${esc(rvLinkQuery)}" oninput="rvLinkQuery=this.value;renderRvLinkPicker()" autofocus></div>
-    <div class="card">${results.length?results.slice(0,30).map(r=>`<div class="log-row" style="cursor:pointer" onclick="pickRvLink('${r.id}')">
+    <div class="frow" style="display:flex;gap:8px;align-items:flex-end">
+      <div style="flex:1"><input id="rv-link-input" placeholder="작품 제목 검색" value="${esc(rvLinkQuery)}" onkeydown="if(event.key==='Enter'){event.preventDefault();runRvLinkSearch()}" autofocus></div>
+      <button class="btn" style="width:auto;padding:0 18px" onclick="runRvLinkSearch()">검색</button>
+    </div>
+    <div class="card">${!rvLinkSearched?'<div class="empty" style="padding:14px 0">제목을 입력하고 검색해주세요</div>':results.length?results.slice(0,30).map(r=>`<div class="log-row" style="cursor:pointer" onclick="pickRvLink('${r.id}')">
       <span style="width:26px;text-align:center;flex-shrink:0">${state.catIcons[r.category]||'☆'}</span>
       <span style="flex:1;margin-left:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.title)}</span>
       <span style="color:var(--sub);font-size:11px;flex-shrink:0">${catLabel(r.category)}</span>
