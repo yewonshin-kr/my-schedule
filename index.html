@@ -1449,6 +1449,7 @@ function rvCardSub(r){
   if(cfg.place!=='none'&&r.place) out+=' · '+esc(r.place)+(r.ott?' ('+esc(r.ott)+')':'');
   if(cfg.screen&&r.screen) out+=' · '+esc(r.screen);
   if(cfg.seat&&r.seat) out+=' · '+esc(r.seat);
+  if(cfg.blogLink&&r.blogLink) out+=` · <a href="${esc(r.blogLink)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:var(--accent);text-decoration:underline">블로그 리뷰</a>`;
   return out;
 }
 function rvCalPriority(cat){
@@ -1580,7 +1581,7 @@ function openReviewModal(id, preset, unified){
   unifiedAdd=!!unified;
   const r=id?state.reviews.find(x=>x.id===id):null;
   rvDraft=r?JSON.parse(JSON.stringify(r)):
-    Object.assign({id:null,title:'',category:state.categories[0],date:'',endDate:'',time:'',rating:0,text:'',img:'',place:'',seat:'',screen:'',memo:'',ott:'',groupId:''}, preset||{});
+    Object.assign({id:null,title:'',category:state.categories[0],date:'',endDate:'',time:'',rating:0,text:'',img:'',place:'',seat:'',screen:'',memo:'',blogLink:'',ott:'',groupId:''}, preset||{});
   renderReviewModal();
 }
 function rvLinkBlock(d){
@@ -1638,11 +1639,11 @@ function setRvPlace(v){
 }
 /* 카테고리별 입력 구성. 저장값이 없으면 카테고리 성격에 맞는 기본값 */
 function getCatCfg(cat){
-  const def = cat==='영화' ? {dateMode:'start', place:'movie', screen:true, seat:true, memo:false}
-    : cat==='애니메이션' ? {dateMode:'start', place:'ott', screen:false, seat:false, memo:false}
-    : cat==='드라마' ? {dateMode:'range', place:'ott', screen:false, seat:false, memo:false}
-    : cat==='게임'||cat==='책' ? {dateMode:'range', place:'none', screen:false, seat:false, memo:true}
-    : {dateMode:'startTime', place:'free', screen:false, seat:true, memo:false};
+  const def = cat==='영화' ? {dateMode:'start', place:'movie', screen:true, seat:true, memo:false, blogLink:false}
+    : cat==='애니메이션' ? {dateMode:'start', place:'ott', screen:false, seat:false, memo:false, blogLink:false}
+    : cat==='드라마' ? {dateMode:'range', place:'ott', screen:false, seat:false, memo:false, blogLink:false}
+    : cat==='게임'||cat==='책' ? {dateMode:'range', place:'none', screen:false, seat:false, memo:true, blogLink:false}
+    : {dateMode:'startTime', place:'free', screen:false, seat:true, memo:false, blogLink:false};
   return Object.assign(def, state.catConfig[cat]||{});
 }
 function placeUI(d){
@@ -1757,6 +1758,7 @@ function renderReviewModal(){
     <div class="frow"><label>별점 (선택) — 별 왼쪽/오른쪽 탭으로 반개 조절</label><div class="stars-input">${stars}</div></div>
     <div class="frow"><label>리뷰 (선택)</label><textarea rows="4" placeholder="감상을 남겨보세요" oninput="rvDraft.text=this.value">${esc(d.text)}</textarea></div>
     ${cfg.memo?`<div class="frow"><label>메모 (선택)</label><input placeholder="짧은 메모" value="${esc(d.memo||'')}" oninput="rvDraft.memo=this.value"></div>`:''}
+    ${cfg.blogLink?`<div class="frow"><label>블로그 리뷰 링크 (선택)</label><input type="url" placeholder="https://..." value="${esc(d.blogLink||'')}" oninput="rvDraft.blogLink=this.value"></div>`:''}
     ${d.info?`<div class="frow"><label style="display:flex;justify-content:space-between;align-items:center">가져온 정보 (줄거리·소개 등)
       <button style="color:var(--danger);font-size:11.5px;font-weight:600" onclick="rvDraft.info='';renderReviewModal()">전체 삭제</button></label>
       <textarea rows="5" placeholder="검색으로 가져온 정보예요. 직접 수정할 수 있어요." oninput="rvDraft.info=this.value">${esc(d.info)}</textarea></div>`:''}
@@ -2494,6 +2496,7 @@ function renderCatConfigSheet(){
       ${check('screen','상영관 (자유 입력)')}
       ${check('seat','좌석')}
       ${check('memo','메모')}
+      ${check('blogLink','블로그 리뷰 링크')}
     </div>
     <button class="btn" onclick="saveCatConfig()">저장</button>
     <button class="btn ghost" onclick="openDataListSheet()">취소</button>
