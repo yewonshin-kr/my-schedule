@@ -70,7 +70,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
 .evt.sched{background:var(--sched)}.evt.review{background:var(--review)}
 .evt.novel{background:transparent;color:var(--novel);border:1px solid var(--novel);font-weight:600}
 .evt.gcal{background:#2E3A34;color:#BFD9CB}
-.status-badge{font-size:10.5px;font-weight:700;border-radius:6px;padding:3px 8px;white-space:nowrap}
+.status-badge{display:inline-flex;align-items:center;font-size:10.5px;font-weight:700;border-radius:6px;padding:3px 8px;white-space:nowrap;line-height:1.4;flex-shrink:0}
 .st-ongoing{color:var(--accent);background:var(--accent-soft)}
 .st-prep{color:var(--sub);background:var(--chip)}
 .st-done{color:var(--review);background:var(--review-soft)}
@@ -1393,7 +1393,12 @@ function renderReviews(){
    같은 제목이라도 자동으로 묶이지 않음. 사용자가 직접 "회차 추가"하거나
    등록 화면에서 "기존 기록에 회차로 추가"를 선택했을 때만 groupId로 연결됨. */
 function rvGroupKey(r){ return r.groupId||r.id; }
-function rvEntrySort(a,b){ return (a.date||'9999-99-99').localeCompare(b.date||'9999-99-99') || String(a.id).localeCompare(String(b.id)); }
+function rvEntrySort(a,b){
+  const ad=!!a.date, bd=!!b.date;
+  if(ad&&bd) return a.date.localeCompare(b.date) || String(a.id).localeCompare(String(b.id));
+  if(ad!==bd) return ad?1:-1;
+  return state.reviews.indexOf(a)-state.reviews.indexOf(b);
+}
 function rvGroupItems(key){ return state.reviews.filter(r=>rvGroupKey(r)===key).sort(rvEntrySort); }
 function rvOrdinal(r){ return rvGroupItems(rvGroupKey(r)).findIndex(x=>x.id===r.id)+1; }
 function rvOrdPrefix(r){ return rvGroupItems(rvGroupKey(r)).length>1 ? rvOrdinal(r)+'차 · ' : ''; }
@@ -1451,10 +1456,18 @@ function rvCalPriority(cat){
   const j=state.categories.indexOf(cat);
   return j<0?999:j;
 }
+function rvSpanDates(r){
+  // 시작일~종료일 전체 날짜 (안전 상한 120일)
+  const out=[]; if(!r.date) return out;
+  let ds=r.date; const end=(r.endDate&&r.endDate>r.date)?r.endDate:r.date;
+  for(let i=0; ds<=end&&i<120; i++){ out.push(ds); ds=addDays(ds,1); }
+  return out;
+}
 function renderReviewCal(container, arr){
   const byDate={};
-  arr.forEach(r=>{ if(!r.date) return; (byDate[r.date]=byDate[r.date]||[]).push(r); });
-  Object.values(byDate).forEach(list=>list.sort((a,b)=>rvCalPriority(a.category)-rvCalPriority(b.category)));
+  arr.forEach(r=>{ rvSpanDates(r).forEach(ds=>{ (byDate[ds]=byDate[ds]||[]).push(r); }); });
+  Object.values(byDate).forEach(list=>list.sort((a,b)=>
+    (rvCalPriority(a.category)-rvCalPriority(b.category)) || (b.date||'').localeCompare(a.date||'')));
   const first=new Date(view.y,view.m,1);
   const start=new Date(first); start.setDate(1-monIdx(first));
   let cells='';
@@ -1552,7 +1565,8 @@ function renderReviewStats(container){
   container.innerHTML = yearChips + cards + trend + catSec + starSec + topSec + placeSec;
 }
 function openRvCalDay(ds){
-  const arr=state.reviews.filter(r=>r.date===ds&&rvMatch(r));
+  const arr=state.reviews.filter(r=>r.date&&rvMatch(r)&&rvSpanDates(r).includes(ds))
+    .sort((a,b)=>(rvCalPriority(a.category)-rvCalPriority(b.category))||(b.date||'').localeCompare(a.date||''));
   if(arr.length===1){ openReviewModal(arr[0].id); return; }
   openSheet(ds+' 후기', arr.map(r=>`<div class="ds-item" onclick="openReviewModal('${r.id}')">
     <span class="ds-badge" style="background:var(--review)"></span>
@@ -1725,7 +1739,6 @@ function renderReviewModal(){
       <div class="frow"><label>일자 (선택)</label><input type="date" value="${d.date}" onchange="rvDraft.date=this.value"></div>
       <div class="frow"><label>시간 (선택)</label><input type="time" value="${esc(d.time||'')}" onchange="rvDraft.time=this.value"></div>
     </div>`:`<div class="frow"><label>일자 (선택)</label><input type="date" value="${d.date}" onchange="rvDraft.date=this.value"></div>`}
-    <div style="font-size:10.5px;color:var(--sub);margin:-6px 0 12px">일자를 비워두면 캘린더에는 안 뜨고 리스트·앨범에서 '미등록'으로 표시돼요.</div>
     ${placeUI(d)}
     <div class="frow"><label>포스터 이미지 (선택)</label>
       <div style="display:flex;gap:12px;align-items:flex-start">
@@ -1746,8 +1759,7 @@ function renderReviewModal(){
     ${cfg.memo?`<div class="frow"><label>메모 (선택)</label><input placeholder="짧은 메모" value="${esc(d.memo||'')}" oninput="rvDraft.memo=this.value"></div>`:''}
     ${d.info?`<div class="frow"><label style="display:flex;justify-content:space-between;align-items:center">가져온 정보 (줄거리·소개 등)
       <button style="color:var(--danger);font-size:11.5px;font-weight:600" onclick="rvDraft.info='';renderReviewModal()">전체 삭제</button></label>
-      <textarea rows="5" placeholder="검색으로 가져온 정보예요. 직접 수정할 수 있어요." oninput="rvDraft.info=this.value">${esc(d.info)}</textarea>
-      <div style="font-size:10.5px;color:var(--sub);margin-top:6px">상세 화면 맨 아래에 표시돼요.</div></div>`:''}
+      <textarea rows="5" placeholder="검색으로 가져온 정보예요. 직접 수정할 수 있어요." oninput="rvDraft.info=this.value">${esc(d.info)}</textarea></div>`:''}
     <button class="btn" onclick="saveReview()">저장</button>
     ${d.id?`<button class="btn ghost" onclick="addNthView()">＋ 회차 추가 (같은 작품)</button><button class="btn del" onclick="deleteReview()">삭제</button>`:''}
   `);
@@ -1757,10 +1769,10 @@ let searchItems=[], searchPage=1, searchQ='', searchPath='', searchHasMore=false
 function deEnt(s){ return String(s||'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'"); }
 function infoPathFor(cat){
   const c=cat||'';
-  if(c==='책') return '/book';
-  if(/영화|드라마|애니/.test(c)) return '/tmdb'; // 영화·드라마·애니메이션 → TMDB
-  if(/게임/.test(c)) return '/game';             // 게임 → RAWG
-  return '/perf'; // 연뮤·콘서트·전시 및 기타 → 공연·전시·행사 검색
+  if(/책|도서|소설/.test(c)) return '/book';
+  if(/게임/.test(c)) return '/game';                              // 게임 → RAWG
+  if(/연뮤|공연|콘서트|전시|뮤지컬|연극|페스티벌/.test(c)) return '/perf'; // 공연류 → 문화정보원
+  return '/tmdb'; // 영화·드라마·애니메이션 및 그 외 신규 카테고리 기본값 → TMDB
 }
 async function searchInfo(){
   const q=(rvDraft.title||'').trim();
@@ -2088,7 +2100,7 @@ function openWorkDetail(id){
   const proofs=state.schedules.filter(s=>s.workId===id);
   const EP_PREVIEW=8, PUB_PREVIEW=6;
   openSheet(esc(w.title), `
-    <div style="display:flex;gap:8px;margin-bottom:16px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
       <span class="status-badge st-${workBadge(w)[0]}">${workBadge(w)[1]}</span>
       <button class="mini-act" style="margin-left:auto" onclick="openWorkModal('${w.id}')">작품 수정</button>
     </div>
