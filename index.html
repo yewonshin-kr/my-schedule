@@ -1756,9 +1756,9 @@ function renderReviewModal(){
       <div class="frow"><label>시작일 (선택)</label><input type="date" value="${d.date}" onchange="rvDraft.date=this.value"></div>
       <div class="frow"><label>종료일 (선택)</label><input type="date" value="${d.endDate&&d.endDate!==d.date?d.endDate:''}" onchange="rvDraft.endDate=this.value"></div>
     </div>`:cfg.dateMode==='startTime'?`<div class="frow-2">
-      <div class="frow"><label>일자 (선택)</label><input type="date" value="${d.date}" onchange="rvDraft.date=this.value"></div>
+      <div class="frow"><label>일자 (선택)</label><input type="date" value="${d.date}" onchange="rvDraft.date=this.value;rvDraft.endDate=this.value"></div>
       <div class="frow"><label>시간 (선택)</label><input type="time" value="${esc(d.time||'')}" onchange="rvDraft.time=this.value"></div>
-    </div>`:`<div class="frow"><label>일자 (선택)</label><input type="date" value="${d.date}" onchange="rvDraft.date=this.value"></div>`}
+    </div>`:`<div class="frow"><label>일자 (선택)</label><input type="date" value="${d.date}" onchange="rvDraft.date=this.value;rvDraft.endDate=this.value"></div>`}
     ${placeUI(d)}
     <div class="frow"><label>포스터 이미지 (선택)</label>
       <div style="display:flex;gap:12px;align-items:flex-start">
@@ -1891,8 +1891,9 @@ function saveReview(){
   if(!d.title.trim()) return alert('제목을 입력해주세요');
   if(!d.date){ d.date=''; d.endDate=''; d.time=''; } // 일자 미등록
   else {
+    if(getCatCfg(d.category).dateMode!=='range') d.endDate=d.date; // 단일 일자 UI: 종료일을 항상 일자와 동기화(검증 전에!)
     if(d.endDate&&d.endDate<d.date) return alert('종료일이 시작일보다 빨라요');
-    if(!d.endDate||getCatCfg(d.category).dateMode!=='range') d.endDate=d.date; // 종료일 없으면 시작일과 동일
+    if(!d.endDate) d.endDate=d.date;
   }
   if(d.id){ const i=state.reviews.findIndex(x=>x.id===d.id); state.reviews[i]=d; }
   else { d.id=uid(); state.reviews.push(d); }
@@ -2818,8 +2819,21 @@ async function fetchGcalMonth(force){
         let guard=0;
         while(d<end&&guard++<62){ items.push({date:d,title:ev.summary||'(제목 없음)',time:''}); d=addDays(d,1); }
       } else if(ev.start&&ev.start.dateTime){
-        const dt=new Date(ev.start.dateTime);
-        items.push({date:fmt(dt),title:ev.summary||'(제목 없음)',time:String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0')});
+        // 시간 지정 일정: 여러 날에 걸치면 기간 전체에 표시 (시간은 첫날에만)
+        const sdt=new Date(ev.start.dateTime);
+        const startD=fmt(sdt);
+        const time=String(sdt.getHours()).padStart(2,'0')+':'+String(sdt.getMinutes()).padStart(2,'0');
+        let endD=startD;
+        if(ev.end&&ev.end.dateTime){
+          const edt=new Date(ev.end.dateTime);
+          endD=fmt(edt);
+          if(edt.getHours()===0&&edt.getMinutes()===0&&endD>startD) endD=addDays(endD,-1); // 자정 종료는 전날까지
+        }
+        let d=startD, guard=0;
+        while(d<=endD&&guard++<62){
+          items.push({date:d, title:ev.summary||'(제목 없음)', time:d===startD?time:''});
+          d=addDays(d,1);
+        }
       }
     });
     gcalCache[ym]=items;
