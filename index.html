@@ -1649,12 +1649,20 @@ function setRvPlace(v){
   renderReviewModal();
 }
 /* 카테고리별 입력 구성. 저장값이 없으면 카테고리 성격에 맞는 기본값 */
+function defaultSearchFor(cat){
+  const c=cat||'';
+  if(/책|도서|소설/.test(c)) return 'book';
+  if(/연뮤|공연|콘서트|전시|뮤지컬|연극|페스티벌/.test(c)) return 'perf';
+  if(/게임/.test(c)) return 'none'; // RAWG 연동 제거로 기본 사용 안 함
+  return 'tmdb';
+}
 function getCatCfg(cat){
   const def = cat==='영화' ? {dateMode:'start', place:'movie', screen:true, seat:true, memo:false, blogLink:false}
     : cat==='애니메이션' ? {dateMode:'start', place:'ott', screen:false, seat:false, memo:false, blogLink:false}
     : cat==='드라마' ? {dateMode:'range', place:'ott', screen:false, seat:false, memo:false, blogLink:false}
     : cat==='게임'||cat==='책' ? {dateMode:'range', place:'none', screen:false, seat:false, memo:true, blogLink:false}
     : {dateMode:'startTime', place:'free', screen:false, seat:true, memo:false, blogLink:false};
+  def.search=defaultSearchFor(cat);
   return Object.assign(def, state.catConfig[cat]||{});
 }
 function placeUI(d){
@@ -1777,20 +1785,22 @@ function renderReviewModal(){
     ${d.id?`<button class="btn ghost" onclick="addNthView()">＋ 회차 추가 (같은 작품)</button><button class="btn del" onclick="deleteReview()">삭제</button>`:''}
   `);
 }
-/* ----- 정보 검색 (중계 서버: 알라딘·문화정보원·TMDB·RAWG) ----- */
+/* ----- 정보 검색 (중계 서버: 알라딘·문화정보원·TMDB — 카테고리 구성에서 소스 선택) ----- */
 let searchItems=[], searchPage=1, searchQ='', searchPath='', searchHasMore=false;
 function deEnt(s){ return String(s||'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'"); }
 function infoPathFor(cat){
-  const c=cat||'';
-  if(/책|도서|소설/.test(c)) return '/book';
-  if(/게임/.test(c)) return '/game';                              // 게임 → RAWG
-  if(/연뮤|공연|콘서트|전시|뮤지컬|연극|페스티벌/.test(c)) return '/perf'; // 공연류 → 문화정보원
-  return '/tmdb'; // 영화·드라마·애니메이션 및 그 외 신규 카테고리 기본값 → TMDB
+  // 카테고리 구성에서 선택한 검색 소스 사용 (미설정 시 이름 기반 기본값)
+  const s=getCatCfg(cat).search||defaultSearchFor(cat);
+  return s==='none' ? '' : '/'+s;
 }
 async function searchInfo(){
   const q=(rvDraft.title||'').trim();
   if(!q) return alert('제목을 먼저 입력한 뒤 검색해주세요');
   searchQ=q; searchPath=infoPathFor(rvDraft.category); searchPage=1; searchItems=[];
+  if(!searchPath){
+    openSheet('정보 검색', '<div class="empty">이 카테고리는 정보 검색을 사용하지 않아요.<br>데이터 리스트 관리 → 카테고리 구성에서<br>검색 소스를 선택하면 켤 수 있어요.</div>', 'renderReviewModal()');
+    return;
+  }
   openSheet('정보 검색', '<div class="empty">검색 중…</div>', 'renderReviewModal()');
   await runSearch(false);
 }
@@ -1802,8 +1812,8 @@ async function runSearch(append){
   try{
     const r=await fetch(API_PROXY+searchPath+'?q='+encodeURIComponent(searchQ)+'&p='+searchPage);
     if(!r.ok){
-      if(searchPath==='/tmdb'||searchPath==='/game'){
-        openSheet('정보 검색', `<div class="empty">${searchPath==='/tmdb'?'영화·드라마·애니':'게임'} 검색은 중계 서버에<br>${searchPath==='/tmdb'?'TMDB':'RAWG'} 연동을 추가한 뒤 사용할 수 있어요</div>`, 'renderReviewModal()');
+      if(searchPath==='/tmdb'){
+        openSheet('정보 검색', `<div class="empty">영화·드라마·애니 검색은 중계 서버에<br>TMDB 연동을 추가한 뒤 사용할 수 있어요</div>`, 'renderReviewModal()');
         return;
       }
       throw new Error('http');
@@ -2466,7 +2476,7 @@ function dlRow(label, actions){
   return `<div class="settings-row" style="padding:12px 2px"><span>${label}</span><span style="display:flex;gap:12px">${actions}</span></div>`;
 }
 /* ----- 카테고리별 입력 구성 ----- */
-let ccCat=null, ccDraft=null;
+let ccCat=null, ccDraft=null, ccName='';
 function moveCategory(i,dir){
   const j=i+dir;
   if(j<0||j>=state.categories.length) return;
@@ -2475,7 +2485,7 @@ function moveCategory(i,dir){
   save(); openDataListSheet();
 }
 function openCatConfigSheet(cat){
-  ccCat=cat; ccDraft=Object.assign({}, getCatCfg(cat));
+  ccCat=cat; ccName=cat; ccDraft=Object.assign({}, getCatCfg(cat));
   renderCatConfigSheet();
 }
 function renderCatConfigSheet(){
@@ -2489,7 +2499,15 @@ function renderCatConfigSheet(){
       이 카테고리의 후기 등록·수정·표시 화면에 어떤 항목을 보여줄지 정해요.<br>
       카테고리·제목·일자·별점·리뷰·포스터는 항상 표시돼요. 화면에서 숨겨도 이미 입력된 값은 데이터에 그대로 남아요.
     </div>
-    <div class="sec-title" style="margin-top:0">일자 구성</div>
+    <div class="frow"><label>카테고리명</label><input value="${esc(ccName)}" oninput="ccName=this.value" placeholder="예: 드라마"></div>
+    <div class="sec-title" style="margin-top:0">정보 검색 소스</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      ${radio('search','tmdb','TMDB (영화·드라마·애니)')}
+      ${radio('search','book','알라딘 (도서)')}
+      ${radio('search','perf','문화정보원 (공연·전시)')}
+      ${radio('search','none','사용 안 함')}
+    </div>
+    <div class="sec-title">일자 구성</div>
     <div style="display:flex;gap:6px;flex-wrap:wrap">
       ${radio('dateMode','range','시작일 + 종료일')}
       ${radio('dateMode','startTime','일자 + 시간')}
@@ -2513,7 +2531,23 @@ function renderCatConfigSheet(){
     <button class="btn ghost" onclick="openDataListSheet()">취소</button>
   `);
 }
+function renameCategory(oldN,newN){
+  const i=state.categories.indexOf(oldN);
+  if(i>=0) state.categories[i]=newN;
+  if(state.catIcons[oldN]!==undefined){ state.catIcons[newN]=state.catIcons[oldN]; delete state.catIcons[oldN]; }
+  if(state.catConfig[oldN]!==undefined){ state.catConfig[newN]=state.catConfig[oldN]; delete state.catConfig[oldN]; }
+  state.reviews.forEach(r=>{ if(r.category===oldN) r.category=newN; });
+  state.filters.exCats=(state.filters.exCats||[]).map(c=>c===oldN?newN:c);
+  if(typeof rvCatFilter!=='undefined'&&rvCatFilter===oldN) rvCatFilter=newN;
+}
 function saveCatConfig(){
+  const newName=(ccName||'').trim();
+  if(!newName) return alert('카테고리명을 입력해주세요');
+  if(newName!==ccCat){
+    if(state.categories.includes(newName)) return alert('이미 있는 카테고리명이에요');
+    renameCategory(ccCat, newName); // 기존 기록·아이콘·설정·필터까지 함께 이동
+    ccCat=newName;
+  }
   state.catConfig[ccCat]=Object.assign({}, ccDraft);
   save(); openDataListSheet();
 }
