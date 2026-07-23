@@ -649,7 +649,7 @@ function openFilterSheet(){
   if(!state.routines.length) html+='<div class="empty" style="padding:8px 0">등록된 루틴이 없어요</div>';
   state.routines.forEach(r=>{ html+=`<label><input type="checkbox" ${!f.exRoutines.includes(r.id)?'checked':''} onchange="toggleEx('exRoutines','${r.id}')">${r.icon} ${esc(r.name)}</label>`; });
   html+='</div><div class="sec-title">Log 카테고리</div><div class="check-list">';
-  state.categories.forEach(c=>{ html+=`<label><input type="checkbox" ${!f.exCats.includes(c)?'checked':''} onchange="toggleEx('exCats','${esc(c)}')">${catLabel(c)}</label>`; });
+  visibleCategories().forEach(c=>{ html+=`<label><input type="checkbox" ${!f.exCats.includes(c)?'checked':''} onchange="toggleEx('exCats','${esc(c)}')">${catLabel(c)}</label>`; });
   html+='</div>';
   openSheet('캘린더 상세 필터', html);
 }
@@ -664,7 +664,7 @@ function dayItems(ds){
   const f=state.filters, out={scheds:[],routines:[],reviews:[],novel:[]};
   if(f.todo) out.scheds = state.schedules.filter(s=>!f.exSchedTypes.includes(s.type)&&!(s.tag&&f.exSchedTags.includes(s.tag))&&schedOccursOn(s,ds));
   if(f.routine) out.routines = state.routines.filter(r=>!f.exRoutines.includes(r.id)&&(routineGoalOn(r,ds)||r.checks[ds]||(r.recur.freq==='flex'&&ds>=r.startDate&&ds<=(r.endDate||'9999-12-31'))));
-  if(f.review) out.reviews = state.reviews.filter(rv=>rv.date&&!f.exCats.includes(rv.category)&&reviewOn(rv,ds)); // 일자 미등록 후기는 캘린더에서 숨김
+  if(f.review) out.reviews = state.reviews.filter(rv=>rv.date&&!catHidden(rv.category)&&!f.exCats.includes(rv.category)&&reviewOn(rv,ds)); // 일자 미등록·비공개 후기는 캘린더에서 숨김
   out.pubs=[];
   state.works.forEach(w=>{
     if(f.novel) w.episodes.forEach(e=>{ if(e.date===ds) out.novel.push({wid:w.id, t:w.title+' '+e.ep+'화', sub:'회차 업로드'}); });
@@ -1282,6 +1282,7 @@ const MEDIA_EMOJIS=['🎬','🎭','🎤','🎧','📖','📚','🖼️','🎨','
 function catLabel(c){ const ic=state.catIcons&&state.catIcons[c]; return (ic?ic+' ':'')+esc(c); }
 function rvMatch(r){
   const ui=state.ui;
+  if(catHidden(r.category)) return false; // 비공개 카테고리는 해제 전 미표시
   if(rvCatFilter&&r.category!==rvCatFilter) return false;
   if(ui.rvYear&&(!r.date||r.date.slice(0,4)!==ui.rvYear)) return false;
   if(ui.rvStars&&ui.rvStars.length){
@@ -1314,6 +1315,12 @@ function openRvFilterSheet(){
     <div style="display:flex;gap:6px;flex-wrap:wrap">
       ${stars.map(v=>`<button class="cchip ${ui.rvStars.includes(v)?'on':''}" style="padding:6px 11px;font-size:12px" onclick="toggleRvStarF(${v})">${v===0?'없음':'★'+v}</button>`).join('')}
     </div>
+    ${anyHiddenCats()?`
+    <div class="sec-title">비공개</div>
+    <label style="display:flex;align-items:center;gap:10px;padding:8px 2px;cursor:pointer">
+      <input type="checkbox" ${showHiddenCats?'checked':''} onchange="showHiddenCats=this.checked;try{localStorage.setItem('psm_showHidden',this.checked?'1':'0')}catch(e){};openRvFilterSheet()" style="width:18px;height:18px">
+      <span style="font-size:13.5px">비공개 카테고리 표시 <span style="font-size:11px;color:var(--sub)">(마지막 설정 유지 · 이 기기에만 적용)</span></span>
+    </label>`:''}
     <button class="btn" style="margin-top:20px" onclick="closeSheet()">적용</button>
     <button class="btn ghost" onclick="state.ui.rvYear='';state.ui.rvStars=[];save();openRvFilterSheet()">초기화</button>`;
   openSheet('후기 필터', html);
@@ -1326,8 +1333,9 @@ function renderReviews(){
   </div>`;
   // 2) 카테고리 선택
   const chips=document.getElementById('rv-cat-chips');
+  if(rvCatFilter&&catHidden(rvCatFilter)) rvCatFilter=null; // 잠금 시 비공개 칩 선택 해제
   chips.innerHTML=`<button class="cchip ${!rvCatFilter?'on':''}" onclick="rvCatFilter=null;renderReviews()">전체</button>`+
-    state.categories.map(c=>`<button class="cchip ${rvCatFilter===c?'on':''}" onclick="rvCatFilter='${esc(c)}';renderReviews()">${catLabel(c)}</button>`).join('');
+    visibleCategories().map(c=>`<button class="cchip ${rvCatFilter===c?'on':''}" onclick="rvCatFilter='${esc(c)}';renderReviews()">${catLabel(c)}</button>`).join('');
   // 3) 서브바: 캘린더뷰=월 이동, 리스트·앨범뷰=정렬+필터
   const filterOn = ui.rvYear||(ui.rvStars&&ui.rvStars.length);
   const iconBtn=(on)=>`width:36px;height:36px;border-radius:10px;background:var(--card);border:1.5px solid ${on?'var(--review)':'var(--line)'};color:${on?'var(--review)':'var(--sub)'};display:flex;align-items:center;justify-content:center;flex-shrink:0`;
@@ -1492,7 +1500,7 @@ function renderReviewCal(container, arr){
 /* ----- 통계 대시보드 (Stats 뷰) ----- */
 let statsYear='all';
 function renderReviewStats(container){
-  const base=state.reviews.filter(r=>!rvCatFilter||r.category===rvCatFilter);
+  const base=state.reviews.filter(r=>!catHidden(r.category)&&(!rvCatFilter||r.category===rvCatFilter));
   if(!base.length){ container.innerHTML='<div class="empty">아직 기록이 없어요.<br>기록이 쌓이면 통계가 여기 나타나요.</div>'; return; }
   const years=[...new Set(base.filter(r=>r.date).map(r=>r.date.slice(0,4)))].sort().reverse();
   if(statsYear!=='all'&&!years.includes(statsYear)) statsYear='all';
@@ -1606,6 +1614,7 @@ function renderRvLinkPicker(){
   const q=rvLinkQuery.trim().toLowerCase();
   const seen=new Set(); const results=[];
   [...state.reviews].sort(rvEntrySort).reverse().forEach(r=>{
+    if(catHidden(r.category)) return; // 비공개 카테고리 기록은 검색에서도 제외
     const key=rvGroupKey(r);
     if(seen.has(key)) return; seen.add(key);
     if(!r.title) return;
@@ -1663,8 +1672,15 @@ function getCatCfg(cat){
     : cat==='게임'||cat==='책' ? {dateMode:'range', place:'none', screen:false, seat:false, memo:true, blogLink:false}
     : {dateMode:'startTime', place:'free', screen:false, seat:true, memo:false, blogLink:false};
   def.search=defaultSearchFor(cat);
+  def.hidden=false;
   return Object.assign(def, state.catConfig[cat]||{});
 }
+/* ----- 비공개 카테고리 (일코 모드) -----
+   표시 여부는 이 기기에 저장되어 마지막 설정이 유지됨 (동기화 대상 아님) */
+let showHiddenCats=(typeof localStorage!=='undefined'&&localStorage.getItem('psm_showHidden')==='1');
+function catHidden(c){ return !!getCatCfg(c).hidden && !showHiddenCats; }
+function visibleCategories(){ return state.categories.filter(c=>!catHidden(c)); }
+function anyHiddenCats(){ return state.categories.some(c=>!!getCatCfg(c).hidden); }
 function placeUI(d){
   const cfg=getCatCfg(d.category);
   let html='';
@@ -1744,7 +1760,7 @@ function renderReviewModal(){
     ${rvLinkBlock(d)}
     <div class="frow"><label>카테고리</label>
       <select onchange="if(this.value==='__new'){openCatModal('review')}else{rvDraft.category=this.value;rvDraft.place='';rvDraft.seat='';rvDraft.ott='';rvDraft.screen='';rvDraft.time='';renderReviewModal()}">
-        ${state.categories.map(c=>`<option value="${esc(c)}" ${d.category===c?'selected':''}>${catLabel(c)}</option>`).join('')}
+        ${state.categories.filter(c=>!catHidden(c)||c===d.category).map(c=>`<option value="${esc(c)}" ${d.category===c?'selected':''}>${catLabel(c)}</option>`).join('')}
         <option value="__new">＋ 카테고리 추가…</option>
       </select></div>
     <div class="frow"><label>제목 *</label>
@@ -2528,6 +2544,15 @@ function renderCatConfigSheet(){
       ${check('memo','메모')}
       ${check('blogLink','블로그 리뷰 링크')}
     </div>
+    <div class="sec-title">비공개</div>
+    <div class="card" style="padding:4px 14px">
+      ${check('hidden','비공개 카테고리 (평소 모든 화면에서 숨김)')}
+    </div>
+    <div style="font-size:11px;color:var(--sub);line-height:1.6;margin-top:-6px;margin-bottom:8px">
+      켜면 이 카테고리와 기록이 칩·목록·캘린더·Report·선택지 어디에도 안 보여요.<br>
+      Log 필터(깔때기) 맨 아래 "비공개 카테고리 표시"를 켜면 나타나고, 그 설정은 기기별로 마지막 상태가 유지돼요.<br>
+      ※ 화면 숨김용이에요 — 백업 JSON·드라이브 파일에는 데이터가 포함돼요.
+    </div>
     <button class="btn" onclick="saveCatConfig()">저장</button>
     <button class="btn ghost" onclick="openDataListSheet()">취소</button>
   `);
@@ -2555,7 +2580,7 @@ function saveCatConfig(){
 function openDataListSheet(){
   const del=(fn,arg)=>`<button style="color:var(--danger);font-size:13px" onclick="${fn}('${esc(arg)}')">삭제</button>`;
   let html='<div class="sec-title" style="margin-top:0">Log 카테고리</div><div class="card">';
-  html+=state.categories.map((c,i)=>dlRow(catLabel(c),
+  html+=state.categories.map((c,i)=>({c,i})).filter(x=>!catHidden(x.c)).map(({c,i})=>dlRow(catLabel(c)+(getCatCfg(c).hidden?' <span style="font-size:10px;color:var(--sub)">🔒비공개</span>':''),
     `<button style="color:var(--sub);font-size:14px;${i===0?'opacity:.25':''}" onclick="moveCategory(${i},-1)">↑</button>`+
     `<button style="color:var(--sub);font-size:14px;${i===state.categories.length-1?'opacity:.25':''}" onclick="moveCategory(${i},1)">↓</button>`+
     `<button style="color:var(--accent);font-size:13px" onclick="openCatConfigSheet('${esc(c)}')">구성</button>`+
