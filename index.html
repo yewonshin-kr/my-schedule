@@ -2718,6 +2718,21 @@ function armSilentAuth(){
   };
   document.addEventListener('pointerdown', h, {once:true});
 }
+/* 선제 갱신: 사용 중 화면 터치 시 만료 10분 전이면 미리 무음 재발급 (끊김 없는 세션 체감) */
+let lastAuthTry=0;
+function maybeRefreshToken(){
+  try{
+    if(localStorage.getItem('psm_syncOn')!=='1') return;
+    const exp=+localStorage.getItem('psm_tokExp')||0;
+    if(Date.now() < exp - 10*60*1000) return;          // 아직 여유 있음
+    if(Date.now() - lastAuthTry < 60*1000) return;      // 60초 쿨다운 (팝업 스팸 방지)
+    lastAuthTry=Date.now();
+    if(initTokenClient()) tokenClient.requestAccessToken({prompt:''});
+  }catch(e){}
+}
+if(typeof document!=='undefined'&&document.addEventListener){
+  document.addEventListener('pointerdown', maybeRefreshToken, {passive:true});
+}
 function onGToken(resp){
   if(resp.error){ syncStatus.connected=false; armSilentAuth(); if(currentTab==='settings')renderSettings(); return; }
   gToken=resp.access_token; syncStatus.connected=true;
